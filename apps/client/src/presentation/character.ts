@@ -46,7 +46,9 @@ export function createCharacterPresentation(scene: Scene) {
   const slash = MeshBuilder.CreateTorus('preview-slash', { diameter: 2.5, thickness: 0.055, tessellation: 48 }, scene);
   slash.parent = root; slash.position.set(0, 1.05, 0.8); slash.rotation.x = Math.PI / 2;
   slash.material = effectMat; slash.setEnabled(false);
+  let attackAt = -10;
   return {
+    attack(time: number) { attackAt = time; },
     updateCharacter(record: CharacterRecord) {
       cloth.diffuseColor = Color3.FromHexString(record.appearance.palette === 'slate' ? '#365e83' : '#873e4c');
       sword.setEnabled(record.equipment.weapon !== null); shield.setEnabled(record.equipment.offhand !== null);
@@ -57,8 +59,10 @@ export function createCharacterPresentation(scene: Scene) {
       body.position.y = running ? Math.abs(Math.sin(time * 10)) * 0.06 : 0;
       for (let i = 0; i < legs.length; i++) legs[i]!.rotation.x = running ? Math.sin(time * 10 + i * Math.PI) * 0.6 : 0;
       for (let i = 0; i < arms.length; i++) arms[i]!.rotation.x = running ? -Math.sin(time * 10 + i * Math.PI) * 0.45 : 0;
+      const attacking = time - attackAt < 0.35;
+      if (attacking) arms[1]!.rotation.x = -1.7 + (time - attackAt) * 7;
       if (demonstration === 'swing') arms[1]!.rotation.x = -1.2 + Math.sin(time * 5) * 1.1;
-      slash.setEnabled(demonstration === 'swing' && sword.isEnabled());
+      slash.setEnabled(attacking || (demonstration === 'swing' && sword.isEnabled()));
       slash.scaling.setAll(0.9 + Math.sin(time * 5) * 0.12);
     },
     dispose() { root.dispose(); for (const mat of [cloth, steel, dark, gold, effectMat]) mat.dispose(); },

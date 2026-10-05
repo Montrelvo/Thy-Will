@@ -16,8 +16,10 @@ export interface InterfaceActions {
   shield(): void;
   demonstration(value: Demonstration): void;
   reset(): void;
+  combat(action: 'target' | 'attack' | 'pickup'): void;
 }
 export function createInterface(scene: Scene, actions: InterfaceActions) {
+  let compact = false;
   const ui = AdvancedDynamicTexture.CreateFullscreenUI('interface', true, scene);
   const text = (name: string, value: string, top: number, size = 15) => {
     const result = new TextBlock(name, value); result.fontFamily = 'system-ui, sans-serif'; result.fontSize = size;
@@ -38,7 +40,9 @@ export function createInterface(scene: Scene, actions: InterfaceActions) {
   story.isEnabled = false; story.alpha = 0.5;
   const summary = text('summary', '', 94, 13);
   const instructions = text('instructions', '', 123, 12); instructions.color = '#9db0c6';
-  const debug = text('debug', '', 155, 11); debug.height = '60px'; debug.isVisible = false;
+  const combatStatus = text('combat-status', '', 154, 12); combatStatus.height = '54px';
+  const combatButtons = [button('target', 'Target · T', 12, 216, () => actions.combat('target')), button('attack', 'Attack · Space', 120, 216, () => actions.combat('attack')), button('pickup', 'Loot · E', 228, 216, () => actions.combat('pickup'))];
+  const debug = text('debug', '', 264, 11); debug.height = '60px'; debug.isVisible = false;
   const panel = new Rectangle('character-panel'); panel.width = '330px'; panel.height = '220px';
   panel.background = '#111d2deb'; panel.color = '#4b6075'; panel.cornerRadius = 8;
   panel.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM; panel.top = '-18px'; panel.isPointerBlocker = true; ui.addControl(panel);
@@ -68,6 +72,7 @@ export function createInterface(scene: Scene, actions: InterfaceActions) {
   const reset = button('reset', 'Reset', -12, -24, actions.reset, 90); reset.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT; reset.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
   return {
     debug,
+    encounter(value: string) { combatStatus.text = value; },
     touchActionAt(x: number, y: number): 'up' | 'down' | 'left' | 'right' | 'sprint' | undefined {
       const scale = scene.getEngine().getHardwareScalingLevel();
       const control = touchButtons.find(b => b.isVisible && b.contains(x / scale, y / scale));
@@ -78,13 +83,17 @@ export function createInterface(scene: Scene, actions: InterfaceActions) {
     },
     blocksPointer(x: number, y: number) {
       const scale = scene.getEngine().getHardwareScalingLevel();
-      return [inspection, arena, story, panel, reset, ...touchButtons].some(control => control.isVisible && control.contains(x / scale, y / scale));
+      return [inspection, arena, story, panel, reset, ...touchButtons, ...combatButtons].some(control => control.isVisible && control.contains(x / scale, y / scale));
     },
     update(record: CharacterRecord, mode: PlayMode, demo: Demonstration, touch: boolean, storage: string, distance: number) {
       inspection.background = mode === 'inspection' ? '#735c34' : '#23364a'; arena.background = mode === 'arena' ? '#735c34' : '#23364a';
+      summary.isVisible = !compact || mode === 'inspection';
+      instructions.isVisible = !compact || mode === 'inspection';
       summary.text = `${record.name} · Level ${record.progression.level} · ${storage}`;
       instructions.text = mode === 'inspection' ? (touch ? 'Drag to orbit · Pinch to zoom' : 'Right drag to orbit · Wheel to zoom') : (touch ? 'Hold arrows to move · Hold Sprint · Drag to orbit' : 'WASD / arrows · Shift sprint · R reset · F3 debug');
       panel.isVisible = mode === 'inspection';
+      combatStatus.isVisible = mode === 'arena';
+      for (const b of combatButtons) b.isVisible = mode === 'arena';
       details.text = `Health ${record.maximumHealth}  ·  Walk ${record.stats.walkSpeed}  ·  Sprint ${record.stats.sprintSpeed}\n${record.equipment.weapon ? TRAINING_GEAR[record.equipment.weapon].label : 'No weapon'}  /  ${record.equipment.offhand ? TRAINING_GEAR[record.equipment.offhand].label : 'No shield'}`;
       palette.textBlock!.text = record.appearance.palette === 'slate' ? 'Slate blue' : 'Crimson';
       sword.textBlock!.text = record.equipment.weapon ? 'Sword: on' : 'Sword: off'; shield.textBlock!.text = record.equipment.offhand ? 'Shield: on' : 'Shield: off';
@@ -94,7 +103,10 @@ export function createInterface(scene: Scene, actions: InterfaceActions) {
     },
     resize(width: number, height: number) {
       ui.idealWidth = width; ui.idealHeight = height;
-      const compact = height < 520;
+      compact = height < 520;
+      for (const b of combatButtons) b.top = compact ? '94px' : '216px';
+      combatStatus.top = compact ? '138px' : '154px';
+      debug.top = compact ? '196px' : '264px';
       panel.horizontalAlignment = compact ? Control.HORIZONTAL_ALIGNMENT_RIGHT : Control.HORIZONTAL_ALIGNMENT_CENTER;
       panel.left = compact ? '-12px' : '0px'; panel.top = compact ? '-12px' : '-18px';
       panel.width = `${Math.min(330, width - 24)}px`;

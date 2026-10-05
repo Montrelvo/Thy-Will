@@ -138,7 +138,7 @@ Everything else can grow outward from that foundation.
 
 Steps 1–3 establish the TypeScript monorepo, Babylon client and shared headless
 simulation. Steps 3.2–3.8 add the persistent local character and device-adapted
-inspection/arena modes.
+inspection/arena modes. Step 4 adds the first fight and loot pickup.
 
 Use Node.js 24 and npm 11 (the lockfile is generated with npm 11.9.0):
 
@@ -198,12 +198,19 @@ controller controls remain available. Click the canvas if it loses focus.
 | Sprint | Hold Shift | Hold right bumper |
 | Orbit camera | Right mouse drag | Right stick |
 | Zoom | Mouse wheel | — |
+| Select nearest living enemy | T / Target button | X / left face button |
+| Melee attack | Space / Attack button | A / bottom face button |
+| Pick up nearest drop | E / Loot button | B / right face button |
 | Reset to spawn | R | Y / top face button |
 | Toggle debug overlay | F3 | — |
 
 Movement follows camera direction. The arena clamps movement at its edges;
-pillars and beacon are visual placeholders without collision. This milestone
-contains no combat, inventory, or cloud save.
+pillars and beacon are visual placeholders without collision. A stationary sentinel starts at 60 HP. Select it, approach within 2.6 m, and
+attack three times (20 damage, 0.4 s cooldown). The gold drop uses a seeded loot
+table; approach within 2 m and collect it. The HUD shows health, targeting,
+feedback and collected bag entries. Bag items are session-only: reload starts
+a new encounter and clears them. Reset changes position only. Equipment
+modifiers and durable inventory arrive in later steps.
 
 `npm run build` creates the static web app in `apps/client/web-dist` and compiled
 workspace modules in each `dist` directory. To run the production build:
@@ -224,7 +231,10 @@ The scene uses WebGL with Babylon GUI for the HUD, a following orbit camera,
 local glTF beacon loaded through an asset manifest, and one shared procedural
 knight renderer. Keyboard, controller and touch movement become commands to the
 headless entity simulation at 50 Hz. Inspection run/swing previews are cosmetic
-and cannot move the gameplay entity or grant progression. The client loads one
+and cannot move the gameplay entity, cause damage, or grant progression.
+Inspection pauses the arena simulation while preserving its combat and loot state.
+Combat animations and hit flashes react to simulation events; health, drops and
+pickups are decided exclusively by the shared headless rules. The client loads one
 versioned local character record. Account linking and cloud saves arrive later.
 
 See [the bridge plan](sources/Character_Modes_Progression_Plan.md) for acceptance
