@@ -8,3 +8,5 @@ coverage/
 web-dist/
 playwright-report/
 test-results/
+.art-cache/
+.art-tools/

@@ -57,7 +57,7 @@ export function createInterface(scene: Scene, actions: InterfaceActions) {
   const idle = panelButton('idle', 'Idle', 10, 143, () => actions.demonstration('idle'));
   const run = panelButton('run', 'Run preview', 116, 143, () => actions.demonstration('run'));
   const swing = panelButton('swing', 'Swing preview', 222, 143, () => actions.demonstration('swing'));
-  const caption = new TextBlock('caption', 'Training loadout · animation previews'); caption.fontSize = 11; caption.color = '#9db0c6';
+  const caption = new TextBlock('caption', 'KayKit / Kay Lousberg · Training previews'); caption.fontSize = 11; caption.color = '#9db0c6';
   caption.height = '23px'; caption.top = '191px'; caption.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP; panel.addControl(caption);
   const hint = text('hint', '', 0, 13); hint.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM; hint.top = '-12px';
   const touchButtons: Button[] = [];

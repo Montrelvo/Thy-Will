@@ -246,3 +246,13 @@ Shared package declaration checking remains enabled. Controller acceptance tests
 use a simulated standard gamepad; physical controller validation remains a manual
 check. The pinned Playwright release has a downloadable Chromium build in the
 execution environment.
+
+## KayKit art foundation (Step 4.5)
+
+The knight uses modified KayKit Adventurers assets by **Kay Lousberg**, licensed
+under CC0. Original license: `sources/art/KayKit-LICENSE.txt`. The client ships
+self-contained slate/crimson GLBs and retains a procedural load-failure fallback.
+
+See [Step 4.5](sources/Art_Development_Step_4_5.md) for the art direction, pinned
+sources, headless Blender commands and phone-accessible GitHub rebuild workflow.
+Normal builds use the committed models and do not require Blender.

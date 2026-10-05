@@ -144,6 +144,29 @@ This slice has no enemy AI or retaliation. The bag is session-only and clears on
 reload; training equipment remains cosmetic. Full inventory/equipment and
 modifiers are Step 5. Account/cloud persistence and story content remain later.
 
+## Step 4.5 — KayKit art foundation and headless Blender
+
+Approved after Step 4 merged as `ba382b6c227837f6f77626833b94ee796d568a5f`.
+Plan: `sources/Art_Development_Step_4_5.md`. Both views now use a real rigged
+KayKit knight with slate/crimson cloth, sword/shield toggles and imported idle,
+run, sword and unarmed animation clips. Missing model loads retain the previous
+procedural character. Combat rules remain in simulation.
+
+Pinned CC0 source hashes and the creator's license accompany scripted Blender
+edits: recolor cloth, enlarge the shield, remove unused accessories and retain
+five clips. Official Blender 4.5.3 was installed and executed headlessly here;
+the complete acquire → edit → export workflow was also rebuilt using the checked-in
+setup script. Each shipped self-contained GLB is approximately 0.5 MB, compared
+with the 3.7 MB source. A manual GitHub rebuild workflow produces artifacts using
+read-only repository permissions. Normal game builds need no Blender install.
+
+Validation includes lint, strict types, boundaries, build, 19 Node tests, all
+11 Chromium scenarios, imported animation transitions, model-failure fallback
+and existing combat/mobile coverage. Phone portrait/landscape and desktop
+screenshots were inspected. This first delivery establishes the character and
+editable pipeline; environment/enemy replacements and HUD polish follow within
+the art direction. Step 5 remains separate.
+
 ## Next — Step 5
 
 Inventory/equipment instances, modifiers and equip-derived character stats.

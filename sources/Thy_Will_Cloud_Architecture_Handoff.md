@@ -1198,6 +1198,14 @@ Fight -> Kill -> Drop -> Pick Up
 
 works without game rules being stored in meshes.
 
+## Step 4.5 — KayKit Art Foundation and Remote Asset Editing
+
+Approved 2026-10-05 before Step 5. Establish a deliberate KayKit visual direction,
+import a rigged knight into the shared presentation, and prove scripted asset
+editing through headless Blender. Pin source revisions, preserve attribution,
+export self-contained GLBs and provide a repeatable remote rebuild workflow.
+Plan and acceptance: `sources/Art_Development_Step_4_5.md`.
+
 ## Step 5 — Inventory / Equipment
 
 Implement:
