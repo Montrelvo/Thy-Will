@@ -133,3 +133,42 @@ Everything else can grow outward from that foundation.
 
 *Thy Will*  
 *A Frankenstein action RPG assembled from the best parts available.*
+
+## Development setup
+
+Step 1 establishes six TypeScript workspaces. There is no playable scene yet;
+Babylon rendering and controls are the next step.
+
+Use Node.js 24 and npm 11 (the lockfile is generated with npm 11.9.0):
+
+```sh
+npm ci
+npm run check
+npm run build
+```
+
+`npm run lint` runs ESLint. `npm run typecheck` checks TypeScript project
+references and import/dependency boundaries. `npm test` builds and verifies the
+headless workspace integration. `npm run clean` removes generated build output.
+
+| Workspace | Responsibility |
+| --- | --- |
+| `apps/client` | Babylon presentation, input, GUI, and networking adapters |
+| `apps/backend` | Secure APIs and later Firebase integration |
+| `apps/game-server` | Future authoritative multiplayer host |
+| `packages/simulation` | Shared headless game rules |
+| `packages/protocol` | Versioned commands, events, and snapshots |
+| `packages/content` | Data-driven definitions |
+| `cloud` | Future cloud configuration |
+| `sources` | Architecture handoff and implementation status |
+
+Shared packages compile without DOM or Node ambient APIs. Simulation can depend
+on protocol and content; neither can depend on applications. Package exports
+point to built ESM and declaration files, and project references order the build.
+No Firebase credentials, deployment secrets, or billing are needed for Step 1.
+
+GitHub Actions runs installation, lint, type checking, tests, and builds on pull
+requests and pushes to `main`. It does not deploy. See
+[sources/Implementation_Status.md](sources/Implementation_Status.md) for progress
+and [the complete handoff](sources/Thy_Will_Cloud_Architecture_Handoff.md) for the
+next steps.

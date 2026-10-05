@@ -1,0 +1,23 @@
+{
+  "name": "@thy-will/simulation",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "dependencies": {
+    "@thy-will/protocol": "0.0.0",
+    "@thy-will/content": "0.0.0"
+  }
+}
