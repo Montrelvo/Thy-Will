@@ -136,8 +136,9 @@ Everything else can grow outward from that foundation.
 
 ## Development setup
 
-Step 1 establishes six TypeScript workspaces. Step 2 adds the controllable
-Babylon.js training grounds, with movement state separate from presentation.
+Steps 1–3 establish the TypeScript monorepo, Babylon client and shared headless
+simulation. Steps 3.2–3.8 add the persistent local character and device-adapted
+inspection/arena modes.
 
 Use Node.js 24 and npm 11 (the lockfile is generated with npm 11.9.0):
 
@@ -165,23 +166,31 @@ headless workspace integration. `npm run clean` removes generated build output.
 Shared packages compile without DOM or Node ambient APIs. Simulation can depend
 on protocol and content; neither can depend on applications. Package exports
 point to built ESM and declaration files, and project references order the build.
-No Firebase credentials, deployment secrets, or billing are needed for Step 1.
 
 GitHub Actions runs installation, lint, type checking, headless tests, builds,
-and Chromium browser acceptance tests on pull requests and pushes to `main`. It does not deploy. See
+and Chromium browser acceptance tests on pull requests and pushes to `main`.
+A separate Pages workflow deploys the shared client on main merges. See
 [sources/Implementation_Status.md](sources/Implementation_Status.md) for progress
 and [the complete handoff](sources/Thy_Will_Cloud_Architecture_Handoff.md) for the
 next steps.
 
 
-## Run the training grounds
+## Run the character viewer and training grounds
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173`. Click the canvas if it loses focus.
+Open `http://127.0.0.1:5173`. Phones start in Character inspection; desktop
+starts in Arena. Use the top buttons to switch. Both modes display the same
+character. Character inspection offers slate/crimson colors, training sword and
+shield visibility, and idle/run/swing previews. These choices save on this device.
+Story is reserved for later stages and is unavailable.
+
+Phone camera: drag the world to orbit and pinch to zoom. In Arena, hold the arrow
+buttons to move, hold Sprint with a second finger, and tap Reset. Keyboard and
+controller controls remain available. Click the canvas if it loses focus.
 
 | Action | Keyboard / mouse | Standard controller |
 | --- | --- | --- |
@@ -212,10 +221,14 @@ npm run test:browser
 ```
 
 The scene uses WebGL with Babylon GUI for the HUD, a following orbit camera,
-local glTF beacon loaded through an asset manifest, and a placeholder capsule.
-Keyboard and standard gamepad input feed plain movement intent into a small
-headless movement boundary. Step 3 will connect this boundary to full entities,
-commands, events, and simulation ticks.
+local glTF beacon loaded through an asset manifest, and one shared procedural
+knight renderer. Keyboard, controller and touch movement become commands to the
+headless entity simulation at 50 Hz. Inspection run/swing previews are cosmetic
+and cannot move the gameplay entity or grant progression. The client loads one
+versioned local character record. Account linking and cloud saves arrive later.
+
+See [the bridge plan](sources/Character_Modes_Progression_Plan.md) for acceptance
+criteria and the dependencies carried forward to Steps 4–8.
 
 The client alone uses `skipLibCheck` because Babylon's loader declarations conflict
 with `exactOptionalPropertyTypes`; application source remains strictly checked.

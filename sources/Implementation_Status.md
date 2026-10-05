@@ -80,6 +80,37 @@ Validation: npm run check covers lint, type checks, architecture boundaries,
 production build and 11 Node tests. Browser acceptance checks cover the existing
 startup, keyboard, sprint/reset, focus loss, resize, controller and asset fallback.
 
+## Steps 3.2–3.8 — Character and device bridge
+
+The approved plan is in `sources/Character_Modes_Progression_Plan.md`, and the
+canonical architecture handoff now includes these intermediate steps.
+
+- 3.2: Validated, versioned headless character profile with stable ID, reserved
+  owner UID, appearance, starter training loadout, progression, stats and health.
+  The client repository adapter persists profile changes locally and keeps
+  unsupported/corrupt data intact. Denied storage leaves a usable session.
+- 3.4: One Babylon renderer builds a placeholder knight with sword/shield, color,
+  movement animation and cosmetic run/swing effects. Both modes reuse it.
+- 3.6: Character inspection and arena share the profile and simulation. Inspection
+  preserves arena position and cannot issue movement commands. The story-stage
+  registry entry is reserved and visibly disabled.
+- 3.8: Babylon GUI adapts to screen density/orientation; native touch orbit/pinch
+  excludes GUI hit regions. Native per-pointer controls support movement plus
+  sprint and release on cancellation, blur and mode changes. Keyboard/controller
+  input remains supported. Rendering density is capped by device class; safe-area
+  padding protects controls around phone cutouts. Asset URLs honor the hosting base.
+
+Local validation: lint, strict types, workspace boundaries, production build,
+13 Node tests and 6 Chromium acceptance tests. Tests include persistence across
+reload, mode sharing, unsupported/denied storage, real browser touch gestures,
+multi-touch sprint, release/cancellation, reset and portrait/landscape layout.
+Desktop and phone screenshots were inspected. Physical devices remain a manual
+check. Cloud CI independently runs this same suite on the review PR.
+
+Local character saves have no cross-device synchronization yet. Training gear
+choices are visual; inventory ownership/modifiers arrive in Step 5. Demonstrations
+have no damage or rewards; combat remains Step 4. No story content is fabricated.
+
 ## Next — Step 4
 
 Implement attack, damage, enemy death, one loot table and pickup to inventory.

@@ -6,10 +6,7 @@ import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder.js';
 import { Scene } from '@babylonjs/core/scene.js';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
 import type { Engine } from '@babylonjs/core/Engines/engine.js';
-import { AdvancedDynamicTexture } from '@babylonjs/gui/2D/advancedDynamicTexture.js';
-import { Control } from '@babylonjs/gui/2D/controls/control.js';
-import { TextBlock } from '@babylonjs/gui/2D/controls/textBlock.js';
-import type { Position } from '@thy-will/simulation';
+import { createCharacterPresentation } from './character.js';
 
 export function createTrainingScene(engine: Engine, canvas: HTMLCanvasElement) {
   const scene = new Scene(engine);
@@ -36,8 +33,6 @@ export function createTrainingScene(engine: Engine, canvas: HTMLCanvasElement) {
   const stone = material('slate', new Color3(0.14, 0.19, 0.25));
   const edge = material('edges', new Color3(0.29, 0.36, 0.42));
   const gold = material('gold', new Color3(0.72, 0.54, 0.23));
-  const blue = material('blue', new Color3(0.19, 0.5, 0.76), true);
-  const ivory = material('ivory', new Color3(0.8, 0.83, 0.8));
   const ground = MeshBuilder.CreateGround('arena', { width: 40, height: 40 }, scene);
   ground.material = stone;
   // Quiet grid makes travel and scale visible without downloaded textures.
@@ -59,39 +54,17 @@ export function createTrainingScene(engine: Engine, canvas: HTMLCanvasElement) {
   }
   const pad = MeshBuilder.CreateCylinder('spawn-pad', { diameter: 4, height: 0.1, tessellation: 48 }, scene);
   pad.position.y = 0.04; pad.material = gold;
-  const player = MeshBuilder.CreateCapsule('player', { radius: 0.45, height: 1.8, tessellation: 12 }, scene);
-  player.position.y = 0.95; player.material = blue;
-  const facing = MeshBuilder.CreateBox('facing', { width: 0.17, height: 0.6, depth: 0.35 }, scene);
-  facing.parent = player; facing.position.set(0, 0.1, 0.4); facing.material = ivory;
-
-  const ui = AdvancedDynamicTexture.CreateFullscreenUI('hud', true, scene);
-  const text = (name: string, value: string, top: string, size: number) => {
-    const block = new TextBlock(name, value);
-    block.color = '#d4dce7'; block.fontFamily = 'system-ui, sans-serif'; block.fontSize = size;
-    block.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-    block.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-    block.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-    block.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-    block.left = '24px'; block.top = top; block.width = '90%'; block.height = '110px';
-    block.isHitTestVisible = false; ui.addControl(block); return block;
-  };
-  text('title', 'THY WILL  /  TRAINING GROUNDS', '24px', 21);
-  text('subtitle', 'Client bootstrap · Explore the arena', '56px', 14);
-  const controls = text('controls', 'WASD / arrows: move   •   Shift: sprint   •   R: reset\nRight drag: orbit   •   Wheel: zoom   •   F3: debug\nController: left stick move · right stick orbit · RB sprint · Y reset', '84px', 13);
-  controls.color = '#96a9bd';
-  const debug = text('debug', '', '176px', 12);
-  debug.color = '#94d5e4'; debug.isVisible = false;
-  const hint = text('hint', 'Move to begin', '0px', 15);
-  hint.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-  hint.top = '-18px'; hint.height = '30px'; hint.color = '#d1ac66';
-
+  const character = createCharacterPresentation(scene);
   return {
-    scene, camera, debug, hint,
-    display(position: Position, direction: Position) {
-      player.position.x = position.x; player.position.z = position.z;
-      if (Math.hypot(direction.x, direction.z) > 0.001) player.rotation.y = Math.atan2(direction.x, direction.z);
-      camera.setTarget(new Vector3(position.x, 0.8, position.z));
+    scene, camera, character,
+    setInspection(inspection: boolean) {
+      for (const mesh of scene.meshes) if (['arena', 'grid', 'boundary', 'pillar', 'cap'].includes(mesh.name)) mesh.setEnabled(!inspection);
+      pad.scaling.setAll(inspection ? 0.65 : 1);
+      camera.lowerRadiusLimit = inspection ? 3 : 12;
+      camera.upperRadiusLimit = inspection ? 10 : 36;
+      camera.radius = inspection ? 5.5 : 24;
+      camera.beta = inspection ? 1.05 : 0.82;
     },
-    dispose() { camera.detachControl(); ui.dispose(); scene.dispose(); },
+    dispose() { camera.detachControl(); character.dispose(); scene.dispose(); },
   };
 }
