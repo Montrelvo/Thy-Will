@@ -1,6 +1,6 @@
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode.js';
 import { Engine } from '@babylonjs/core/Engines/engine.js';
-import { advancePosition, type Position } from '@thy-will/simulation';
+import { Simulation, TICK_SECONDS, WALK_SPEED, SPRINT_SPEED } from '@thy-will/simulation';
 import { InputController } from './input/input.js';
 import { createTrainingScene } from './presentation/scene.js';
 import { AssetLoader } from './assets/asset-loader.js';
@@ -16,13 +16,18 @@ async function start(): Promise<() => void> {
   const view = createTrainingScene(engine, canvas);
   const assets = new AssetLoader(view.scene, { beacon: { rootUrl: '/assets/', fileName: 'beacon.gltf' } });
   const input = new InputController(canvas, () => { view.debug.isVisible = !view.debug.isVisible; });
-  let position: Position = { x: 0, z: 0 };
+  const simulation = new Simulation();
+  simulation.spawn({ id: 'player', transform: { position: { x: 0, z: 0 }, rotationY: 0 }, stats: { walkSpeed: WALK_SPEED, sprintSpeed: SPRINT_SPEED }, health: { current: 100, maximum: 100 } });
+  simulation.drainEvents();
+  let accumulator = 0;
+  let pendingReset = false;
+  let position = { x: 0, z: 0 };
   let distance = 0; let debugTimer = 0; let assetState = 'loading'; let disposed = false;
   const events = new AbortController();
   canvas.addEventListener('contextmenu', (event) => event.preventDefault(), { signal: events.signal });
   window.addEventListener('resize', () => engine.resize(), { signal: events.signal });
   let hidden = document.hidden;
-  document.addEventListener('visibilitychange', () => { hidden = document.hidden; input.clear(); }, { signal: events.signal });
+  document.addEventListener('visibilitychange', () => { hidden = document.hidden; input.clear(); accumulator = 0; }, { signal: events.signal });
   const render = () => {
     if (hidden || disposed) return;
     const seconds = Math.min(engine.getDeltaTime() / 1000, 0.05);
@@ -32,19 +37,29 @@ async function start(): Promise<() => void> {
     // Translate camera-relative intent into world coordinates before simulation.
     const alpha = view.camera.alpha;
     const direction = { x: -Math.sin(alpha) * frame.x - Math.cos(alpha) * frame.z, z: Math.cos(alpha) * frame.x - Math.sin(alpha) * frame.z };
-    if (frame.reset) { position = { x: 0, z: 0 }; distance = 0; }
-    else {
-      const next = advancePosition(position, { ...direction, sprint: frame.sprint }, seconds);
-      distance += Math.hypot(next.x - position.x, next.z - position.z); position = next;
+    pendingReset ||= frame.reset;
+    accumulator += seconds;
+    while (accumulator >= TICK_SECONDS) {
+      simulation.apply(pendingReset ? { type: 'ResetPosition', entityId: 'player' } : { type: 'Move', entityId: 'player', direction, sprint: frame.sprint });
+      simulation.step();
+      for (const event of simulation.drainEvents()) {
+        if (event.type === 'PositionReset') distance = 0;
+        if (event.type === 'EntityMoved') distance += Math.hypot(event.position.x - position.x, event.position.z - position.z);
+      }
+      position = simulation.getEntity('player')!.transform.position;
+      pendingReset = false;
+      accumulator -= TICK_SECONDS;
     }
-    view.display(position, direction);
+    const rotation = simulation.getEntity('player')!.transform.rotationY;
+    view.display(position, { x: Math.sin(rotation), z: Math.cos(rotation) });
     view.hint.text = distance > 0.25 ? `${frame.sprint ? 'SPRINTING' : 'EXPLORING'}   /   ${distance.toFixed(1)} m traveled` : 'Move to begin';
     debugTimer += seconds;
     if (debugTimer >= 0.2) {
       debugTimer = 0;
-      view.debug.text = `WebGL ${engine.webGLVersion} · ${engine.getFps().toFixed(0)} FPS · ${view.scene.meshes.length} meshes\nPosition ${position.x.toFixed(2)}, ${position.z.toFixed(2)} · ${frame.source}\nAsset: ${assetState} · Solo movement authority`;
+      view.debug.text = `WebGL ${engine.webGLVersion} · ${engine.getFps().toFixed(0)} FPS · ${view.scene.meshes.length} meshes\nPosition ${position.x.toFixed(2)}, ${position.z.toFixed(2)} · ${frame.source}\nAsset: ${assetState} · Solo simulation authority · tick ${simulation.tick}`;
     }
     // Read-only diagnostics also support browser acceptance tests.
+    canvas.dataset['simulationTick'] = String(simulation.tick);
     canvas.dataset['positionX'] = position.x.toFixed(3);
     canvas.dataset['positionZ'] = position.z.toFixed(3);
     canvas.dataset['debug'] = String(view.debug.isVisible);

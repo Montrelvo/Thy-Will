@@ -47,11 +47,43 @@ Rendering is WebGL for this bootstrap. WebGPU selection can be introduced later.
 Visual props have no obstacle collision; only arena bounds constrain movement.
 No combat, inventory, persistence, or cloud resources are implemented yet.
 
-## Next — Step 3
+## Step 2.5 — Merged and deployed
 
-Add EntityId, entities, transforms, stats, health, commands/events, simulation tick,
-random service abstraction, and serialization. Keep rules headless and connect
-the client through that shared simulation interface.
+PR #3 merged into main as `622d71a413598d84a978bd170a1de190cf093c11`.
+Main Workspace checks and Mobile preview deployment both succeeded.
+
+## Step 3 — Shared simulation skeleton
+
+Protocol owns plain entity IDs, transforms, movement stats, health, commands,
+events and versioned snapshots. Simulation owns entity state, validated spawning,
+a bounded command queue, a 50 Hz fixed tick, movement and reset, event draining,
+and an injectable random service with an explicit reproducible state.
+
+The Babylon client sends world-space intents and displays entity state. A client
+accumulator advances fixed ticks with the existing pause/time-cap protections.
+The headless game-server entrypoint exposes the same Simulation session factory.
+Meshes and browser APIs are absent from shared packages.
+
+Snapshots validate unknown JSON, schema/protocol versions, unique IDs, finite and
+bounded transforms/stats, health, tick and random state. Restoring resumes ticks
+and the exact seeded random stream. Snapshots require a settled command queue;
+commands and undrained events are transient and are not restored. These are local
+simulation checkpoints, not authenticated cloud saves or multiplayer messages.
+The current random algorithm is lcg32; future algorithms require explicit version
+and restore support. The old advancePosition helper remains for compatibility.
+
+Only the latest command per entity is applied each tick; movement intents last
+one tick and are resubmitted by the client. Hosts must drain events regularly.
+Remote transport validation and authenticated command ownership remain future work.
+
+Validation: npm run check covers lint, type checks, architecture boundaries,
+production build and 11 Node tests. Browser acceptance checks cover the existing
+startup, keyboard, sprint/reset, focus loss, resize, controller and asset fallback.
+
+## Next — Step 4
+
+Implement attack, damage, enemy death, one loot table and pickup to inventory.
+Keep combat rules in the shared simulation and presentation driven by events.
 
 ## Permissions
 

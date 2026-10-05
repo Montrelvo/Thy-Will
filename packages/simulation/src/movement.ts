@@ -1,5 +1,4 @@
-// Temporary movement-only authority for the bootstrap. No meshes or DOM state.
-// Step 3 will integrate this boundary with entities, commands, events, and ticks.
+// Legacy bootstrap movement helper; the client now uses Simulation commands.
 export interface Position { x: number; z: number }
 export interface MovementIntent { x: number; z: number; sprint: boolean }
 export const ARENA_LIMIT = 18;
