@@ -4,8 +4,14 @@ async function position(page) {
   return page.locator('#game').evaluate((canvas) => ({ x: Number(canvas.dataset.positionX), z: Number(canvas.dataset.positionZ) }));
 }
 
-async function move(page, key, milliseconds = 350) {
-  await page.keyboard.down(key); await page.waitForTimeout(milliseconds); await page.keyboard.up(key);
+async function move(page, key) {
+  const start = await position(page);
+  await page.keyboard.down(key);
+  await expect.poll(async () => {
+    const current = await position(page);
+    return Math.hypot(current.x - start.x, current.z - start.z);
+  }, { timeout: 10000 }).toBeGreaterThan(0.7);
+  await page.keyboard.up(key);
   return position(page);
 }
 
@@ -46,14 +52,12 @@ test('standard controller input moves the player and reset is edge-triggered', a
   });
   await page.goto('/'); await expect(page.locator('#game')).toHaveAttribute('data-ready', 'true');
   await page.evaluate(() => { window.testPad.axes[0] = 0.7; });
-  await page.waitForTimeout(350);
-  expect((await position(page)).x).toBeGreaterThan(0.4);
+  await expect.poll(async () => (await position(page)).x, { timeout: 10000 }).toBeGreaterThan(0.4);
   await expect(page.locator('#game')).toHaveAttribute('data-input', 'controller');
   await page.evaluate(() => { window.testPad.axes[0] = 0; window.testPad.buttons[3].pressed = true; });
   await expect.poll(async () => (await position(page)).x).toBe(0);
   await page.evaluate(() => { window.testPad.axes[0] = 0.7; });
-  await page.waitForTimeout(250);
-  expect((await position(page)).x).toBeGreaterThan(0.3);
+  await expect.poll(async () => (await position(page)).x, { timeout: 10000 }).toBeGreaterThan(0.3);
 });
 
 
