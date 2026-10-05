@@ -1,0 +1,23 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "packages/protocol"
+    },
+    {
+      "path": "packages/content"
+    },
+    {
+      "path": "packages/simulation"
+    },
+    {
+      "path": "apps/backend"
+    },
+    {
+      "path": "apps/game-server"
+    },
+    {
+      "path": "apps/client"
+    }
+  ]
+}

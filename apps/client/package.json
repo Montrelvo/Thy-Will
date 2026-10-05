@@ -1,0 +1,33 @@
+{
+  "name": "@thy-will/client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b --pretty false",
+    "build:web": "vite build",
+    "dev": "vite --host 127.0.0.1",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@babylonjs/core": "9.29.0",
+    "@babylonjs/gui": "9.29.0",
+    "@babylonjs/loaders": "9.29.0",
+    "@thy-will/content": "0.0.0",
+    "@thy-will/protocol": "0.0.0",
+    "@thy-will/simulation": "0.0.0"
+  },
+  "devDependencies": {
+    "@webgpu/types": "0.1.74"
+  }
+}

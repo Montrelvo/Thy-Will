@@ -998,3 +998,589 @@ At $0.12/GiB:
 
 ```text
 ~$0.0103 network cost/player-hour
+```
+
+## Compute Before Free Tier
+
+One server:
+
+```text
+~$0.0684/hour
+```
+
+At 25 concurrent players:
+
+```text
+~$0.00274 compute/player-hour
+```
+
+## Approximate Monthly Scenarios
+
+| Multiplayer usage | Approx server instance-hours | Compute after current free allowance* | Network at 25 KiB/s | Approx subtotal |
+|---:|---:|---:|---:|---:|
+| 1,000 player-hours | 40 | ~$0 | ~$10.30 | ~$10 |
+| 10,000 player-hours | 400 | ~$22 | ~$103 | ~$125 |
+| 100,000 player-hours | 4,000 | ~$268 | ~$1,030 | ~$1,298 |
+
+\* Free allowances are billing-account scoped and actual bills depend on other workloads consuming them.
+
+This table excludes database activity, logging, matchmaking requests, asset downloads, load-balancing costs, GKE infrastructure, regional differences, taxes, storage, abuse, observability ingestion, and backups.
+
+---
+
+# 21. Example 10,000-MAU Planning Scenario
+
+Assume:
+
+```text
+10,000 monthly active players
+500 MiB cold asset download/player/month
+10 multiplayer hours/player/month
+25 KiB/sec average multiplayer downstream traffic
+25 concurrent players/server process
+mostly North American traffic
+```
+
+Approximate major costs under these assumptions:
+
+```text
+Asset CDN cached transfer:
+~$400 before request/cache-fill details
+
+Multiplayer network:
+~$1,030
+
+Multiplayer compute:
+~$268
+
+Firestore:
+likely comparatively small if save design is disciplined
+```
+
+Core planning subtotal:
+
+```text
+~$1,700/month order of magnitude
+```
+
+Most important sensitivity variables:
+
+1. actual asset download size
+2. cache hit rate
+3. bytes/player-second
+4. concurrent players/server process
+5. simulation CPU
+6. geographic distribution
+7. log volume
+8. persistent-state write frequency
+
+---
+
+# 22. Cost Controls
+
+Implement before scale:
+
+- Google Cloud billing budget alerts
+- per-service dashboards
+- network egress monitoring
+- Firestore operation dashboards
+- Cloud Run instance limits during development
+- staging separate from production
+- log retention limits
+- rate limits
+- asset caching
+- immutable versioned assets
+
+Budget alerts do not automatically stop all spending. Do not assume a single global cap will safely stop every Google Cloud resource.
+
+---
+
+# 23. Step-by-Step Build Plan
+
+## Step 1 — Establish Monorepo
+
+Create:
+
+```text
+apps/client
+apps/backend
+apps/game-server
+packages/simulation
+packages/protocol
+packages/content
+cloud
+sources
+```
+
+Acceptance criteria:
+
+- workspace builds from a clean clone
+- TypeScript configuration shared
+- lint/typecheck command
+- test command
+- no gameplay implementation depends on Firebase yet
+
+## Step 2 — Babylon Client Bootstrap
+
+Create:
+
+- engine initialization
+- scene lifecycle
+- camera
+- player placeholder
+- environment placeholder
+- keyboard/controller input
+- debug overlay
+- asset loader abstraction
+
+Acceptance criteria:
+
+- browser opens into a controllable 3D scene
+- rendering code is isolated from simulation code
+
+## Step 3 — Shared Simulation Skeleton
+
+Implement:
+
+- EntityId
+- Entity
+- Transform state
+- Stats
+- Health
+- Command interface
+- Event interface
+- Simulation tick
+- random-service abstraction
+- serialization boundary
+
+Acceptance criteria:
+
+- simulation can execute in Node without Babylon or DOM
+- tests can spawn entities, apply commands, and inspect events
+
+## Step 4 — First Combat Loop
+
+Implement in simulation:
+
+```text
+move
+target
+attack
+damage
+death
+loot
+```
+
+Babylon visualizes results.
+
+Acceptance criteria:
+
+```text
+Fight -> Kill -> Drop -> Pick Up
+```
+
+works without game rules being stored in meshes.
+
+## Step 5 — Inventory / Equipment
+
+Implement:
+
+- item instance ID
+- base item definition
+- affixes
+- inventory
+- equip slots
+- derived stats
+- serialization
+
+Acceptance criteria:
+
+- changing equipment changes simulated stats
+- Babylon UI only displays resulting state
+
+## Step 6 — Crafting
+
+Implement modular operations such as:
+
+- add modifier
+- reroll modifier
+- upgrade value
+- replace modifier
+- combine components
+- socket/attach effect
+- server-validation hooks
+
+Acceptance criteria:
+
+- crafting works from data definitions
+- no UI-specific crafting logic exists in simulation
+
+## Step 7 — Firebase Project
+
+Create development Firebase/Google Cloud project.
+
+Enable:
+
+- Authentication
+- Firestore
+- Hosting
+
+Optionally later:
+
+- Realtime Database
+
+Acceptance criteria:
+
+- anonymous user can sign in
+- player identity survives reload
+- development security rules exist
+
+## Step 8 — Save / Load
+
+Initial durable schema:
+
+```text
+uid
+characterId
+schemaVersion
+progression
+inventory
+equipment
+currencies
+unlocks
+settings
+updatedAt
+```
+
+Acceptance criteria:
+
+- character saves
+- reload restores character
+- schema has explicit versioning
+- migration path exists
+
+## Step 9 — Firebase Hosting
+
+Deploy Babylon web build.
+
+Acceptance criteria:
+
+- public HTTPS build
+- cache headers configured
+- environment configuration separated
+- deploy automated
+
+## Step 10 — Cloud CI
+
+On pull request:
+
+- install
+- typecheck
+- unit tests
+- build
+- asset validation
+
+On main merge:
+
+- deploy development/staging automatically
+
+Acceptance criteria:
+
+- clean cloud build reproduces the game
+- local machine is not a special dependency
+
+## Step 11 — Cloud Run Backend
+
+Initial endpoints:
+
+```text
+/health
+/session
+/profile
+/save
+/craft
+/matchmaking
+```
+
+Use Firebase ID token verification.
+
+Acceptance criteria:
+
+- backend verifies authenticated user
+- client cannot impersonate another UID
+- privileged operations are not trusted directly from browser input
+
+## Step 12 — Asset Pipeline
+
+Acceptance criteria:
+
+- source asset goes in
+- optimized game asset comes out
+- manifest is regenerated
+- version/hash is produced
+- client loads asset by manifest entry
+
+## Step 13 — CDN Split
+
+Do only once measurements justify it.
+
+Move large immutable assets from general Hosting into:
+
+```text
+Cloud Storage -> Cloud CDN
+```
+
+## Step 14 — Multiplayer Protocol Prototype
+
+Define:
+
+```text
+ClientCommand
+ServerEvent
+WorldSnapshot
+EntityDelta
+Spawn
+Despawn
+Correction
+Ping/Pong
+```
+
+Acceptance criteria:
+
+- protocol is versioned
+- simulation runs unchanged under local or remote authority
+
+## Step 15 — Cloud Run Multiplayer Experiment
+
+Run headless server in Cloud Run via WebSocket.
+
+Measure:
+
+- CPU/session
+- RAM/session
+- players/process
+- KiB/player-second
+- latency
+- reconnect behavior
+- snapshot rate
+- correction rate
+
+Acceptance criteria:
+
+- two or more real clients share one authoritative encounter
+- reconnect works
+- cost telemetry is collected
+
+## Step 16 — Dedicated Server Decision Gate
+
+Move toward Kubernetes only when measurements show a reason.
+
+Examples:
+
+- stable dedicated session routing is needed
+- UDP becomes desirable
+- Cloud Run timeout/reconnect behavior is undesirable
+- session lifecycle needs stronger allocation semantics
+- multiplayer concurrency justifies fleet orchestration
+- per-session control is needed
+
+## Step 17 — GKE + Agones
+
+Deploy:
+
+- GKE cluster
+- Agones controller
+- GameServer spec
+- Fleet
+- allocator
+- health checks
+- autoscaling
+
+Acceptance criteria:
+
+- matchmaker allocates a game server
+- server becomes Ready
+- players receive endpoint
+- session transitions to Allocated
+- server shuts down/recycles safely
+- fleet replenishes automatically
+
+---
+
+# 24. First Playable Vertical Slice
+
+Recommended first slice:
+
+```text
+Player enters one combat arena
+        |
+Kills a group of enemies
+        |
+One equipment item drops
+        |
+Player equips or salvages/crafts it
+        |
+Build becomes observably stronger
+        |
+Player fights a stronger enemy
+        |
+Progress saves to cloud
+```
+
+Required systems:
+
+- movement
+- one attack
+- one enemy
+- health/damage
+- death
+- one loot table
+- inventory
+- one equipment slot
+- one crafting transformation
+- visual feedback
+- Firestore save
+- Firebase Authentication
+- deployed web build
+
+---
+
+# 25. Do Not Build Yet
+
+Delay:
+
+- full MMO world
+- dozens of classes
+- giant skill tree
+- auction house
+- guilds
+- PvP
+- Kubernetes before multiplayer measurements
+- advanced matchmaking
+- hundreds of crafting modifiers
+- procedural world generation unless required by the first loop
+- microservice fragmentation
+- complex economy
+- custom engine work Babylon already solves
+
+First prove:
+
+```text
+Babylon presentation
++
+headless simulation
++
+cloud persistence
++
+cloud deployment
+```
+
+---
+
+# 26. Architecture Invariants
+
+1. **Babylon is presentation/runtime, not persistent authority.**
+2. **Gameplay rules live in a headless shared simulation package.**
+3. **Single-player and multiplayer use the same rules package.**
+4. **Persistence is not the realtime combat transport.**
+5. **The client is not trusted with durable multiplayer rewards.**
+6. **Game content should be data-driven where practical.**
+7. **Large assets should be cacheable and versioned.**
+8. **GitHub is the source of truth.**
+9. **Build and deployment should be reproducible in cloud CI.**
+10. **Infrastructure complexity is added only when measurements justify it.**
+11. **Track bytes/player-second and player-hours from the first multiplayer test.**
+12. **Measure cost per active player, not just total cloud bill.**
+
+---
+
+# 27. Immediate Implementation Order
+
+```text
+1. Monorepo/workspaces
+2. Babylon client bootstrap
+3. Shared headless simulation
+4. Command/event protocol
+5. Fight -> kill -> loot
+6. Inventory/equipment
+7. Crafting
+8. Firebase Authentication
+9. Firestore save/load
+10. Firebase Hosting
+11. Cloud CI/CD
+12. Cloud Run authenticated backend
+13. Asset pipeline
+14. CDN split when justified
+15. Multiplayer command protocol
+16. Cloud Run WebSocket prototype
+17. Measure
+18. GKE + Agones only after the decision gate
+```
+
+If Codex or another implementation agent is handed this document, it should begin at **Step 1** and preserve the architecture invariants above.
+
+---
+
+# 28. Source References
+
+Official sources checked for this architecture:
+
+- Babylon.js engine specifications  
+  https://www.babylonjs.com/specifications/
+
+- Firebase projects and Google Cloud billing relationship  
+  https://firebase.google.com/docs/projects/billing/firebase-pricing-plans
+
+- Firebase Hosting usage, quotas, and pricing  
+  https://firebase.google.com/docs/hosting/usage-quotas-pricing
+
+- Firestore pricing and free quota  
+  https://firebase.google.com/docs/firestore/pricing
+
+- Firestore Standard operation pricing  
+  https://firebase.google.com/docs/firestore/standard-edition
+
+- Firebase Realtime Database limits  
+  https://firebase.google.com/docs/database/usage/limits
+
+- Firebase product pricing  
+  https://firebase.google.com/pricing
+
+- Cloud Run WebSockets  
+  https://docs.cloud.google.com/run/docs/triggering/websockets
+
+- Cloud Run pricing  
+  https://cloud.google.com/run/pricing
+
+- Google Cloud network pricing  
+  https://cloud.google.com/vpc/network-pricing
+
+- Cloud CDN pricing  
+  https://cloud.google.com/cdn/pricing
+
+- Agones documentation  
+  https://agones.dev/site/docs/
+
+---
+
+# 29. Handoff Summary
+
+**Build Thy Will as one game with two possible authority modes.**
+
+For single-player, the browser owns the simulation.
+
+For multiplayer, a dedicated server owns the simulation.
+
+Both use the same game-rules package.
+
+Babylon.js renders the result.
+
+Firebase stores durable player state.
+
+Cloud Run handles scalable managed services and the first multiplayer experiments.
+
+Large assets graduate to Storage + CDN when traffic warrants it.
+
+If dedicated real-time multiplayer grows beyond the comfortable Cloud Run model, deploy the same authoritative game-server concept to GKE + Agones.
+
+That path maximizes cloud offloading without prematurely paying the financial or engineering cost of MMO-scale infrastructure.
