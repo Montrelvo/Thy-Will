@@ -43,7 +43,7 @@ test('invalid and unknown commands do not corrupt settled state; input is copied
   const world = new Simulation(); world.spawn(player()); world.drainEvents();
   assert.throws(() => world.spawn(player()));
   assert.throws(() => world.apply({ type: 'Move', entityId: 'player', direction: { x: NaN, z: 0 }, sprint: false }));
-  assert.throws(() => world.apply({ type: 'Attack', entityId: 'player' }));
+  assert.throws(() => world.apply({ type: 'Unsupported', entityId: 'player' }));
   const direction = { x: 1, z: 0 };
   world.apply({ type: 'Move', entityId: 'player', direction, sprint: false }); direction.x = -1;
   assert.throws(() => world.snapshot(), /settled/);

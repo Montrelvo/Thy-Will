@@ -48,5 +48,5 @@ export function createCharacter(characterId: string): CharacterRecord {
 }
 export function characterEntity(character: CharacterRecord): Entity {
   const record = parseCharacter(character);
-  return { id: record.characterId, transform: { position: { x: 0, z: 0 }, rotationY: 0 }, stats: record.stats, health: { current: record.maximumHealth, maximum: record.maximumHealth } };
+  return { id: record.characterId, kind: 'player', combat: { targetId: null, nextAttackTick: 0 }, transform: { position: { x: 0, z: 0 }, rotationY: 0 }, stats: record.stats, health: { current: record.maximumHealth, maximum: record.maximumHealth } };
 }

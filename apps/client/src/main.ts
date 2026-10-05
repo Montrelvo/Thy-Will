@@ -1,7 +1,10 @@
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode.js';
 import { Engine } from '@babylonjs/core/Engines/engine.js';
-import { Simulation, TICK_SECONDS, characterEntity, type CharacterRecord } from '@thy-will/simulation';
+import { Simulation, TICK_SECONDS, characterEntity, createArenaEnemy, type CharacterRecord } from '@thy-will/simulation';
 import { attachTouchControls } from './input/touch-controls.js';
+import { createEncounterPresentation } from './presentation/encounter.js';
+import { ARENA_ENEMY, LOOT_DEFINITIONS } from '@thy-will/content';
+import type { CombatAction } from './input/input.js';
 import { InputController } from './input/input.js';
 import { createTrainingScene } from './presentation/scene.js';
 import { AssetLoader } from './assets/asset-loader.js';
@@ -28,7 +31,10 @@ async function start(): Promise<() => void> {
   const view = createTrainingScene(engine, canvas);
   let assetRoots: TransformNode[] = [];
   const assets = new AssetLoader(view.scene, { beacon: { rootUrl: `${import.meta.env.BASE_URL}assets/`, fileName: 'beacon.gltf' } });
-  const simulation = new Simulation(); simulation.spawn(characterEntity(character)); simulation.drainEvents();
+  const simulation = new Simulation(); simulation.spawn(characterEntity(character)); simulation.spawn(createArenaEnemy()); simulation.drainEvents();
+  const encounter = createEncounterPresentation(view.scene);
+  let pendingActions: CombatAction[] = [];
+  let combatMessage = 'Select the sentinel, approach, then attack.';
   let accumulator = 0; let pendingReset = false; let animationTime = 0;
   let position = { x: 0, z: 0 };
   const input = new InputController(canvas, () => { hud.debug.isVisible = !hud.debug.isVisible; });
@@ -37,6 +43,7 @@ async function start(): Promise<() => void> {
     view.character.updateCharacter(character); canvas.focus();
   };
   const switchMode = (next: PlayMode) => {
+    pendingActions = [];
     mode = next; demonstration = 'idle'; touchControls.clear(); input.clear(); accumulator = 0; pendingReset = false;
     view.setInspection(mode === 'inspection');
     for (const root of assetRoots) root.setEnabled(mode === 'arena');
@@ -44,6 +51,7 @@ async function start(): Promise<() => void> {
   };
   const hud = createInterface(view.scene, {
     mode: switchMode,
+    combat: action => { if (mode === 'arena') pendingActions.push(action); canvas.focus(); },
     palette: () => updateCharacter(record => { record.appearance.palette = record.appearance.palette === 'slate' ? 'crimson' : 'slate'; }),
     weapon: () => updateCharacter(record => { record.equipment.weapon = record.equipment.weapon ? null : 'training-sword'; }),
     shield: () => updateCharacter(record => { record.equipment.offhand = record.equipment.offhand ? null : 'training-shield'; }),
@@ -78,13 +86,33 @@ async function start(): Promise<() => void> {
     const alpha = view.camera.alpha;
     const direction = { x: -Math.sin(alpha) * frame.x - Math.cos(alpha) * frame.z, z: Math.cos(alpha) * frame.x - Math.sin(alpha) * frame.z };
     pendingReset ||= mode === 'arena' && frame.reset;
-    accumulator += seconds;
+    if (mode === 'arena') { pendingActions.push(...frame.actions); accumulator += seconds; }
     while (accumulator >= TICK_SECONDS) {
       if (mode === 'arena') simulation.apply(pendingReset ? { type: 'ResetPosition', entityId: character.characterId } : { type: 'Move', entityId: character.characterId, direction, sprint: frame.sprint });
+      for (const action of pendingActions) {
+        if (action === 'attack') simulation.apply({ type: 'Attack', entityId: character.characterId });
+        if (action === 'target') {
+          const targetId = simulation.nearestTarget(character.characterId);
+          if (targetId) simulation.apply({ type: 'Target', entityId: character.characterId, targetId });
+          else combatMessage = 'No living target available.';
+        }
+        if (action === 'pickup') {
+          const lootId = simulation.nearestLoot(character.characterId);
+          if (lootId) simulation.apply({ type: 'PickUp', entityId: character.characterId, lootId });
+          else combatMessage = 'No loot available.';
+        }
+      }
+      pendingActions = [];
       simulation.step();
       for (const event of simulation.drainEvents()) {
-        if (event.type === 'PositionReset') distance = 0;
-        if (event.type === 'EntityMoved') distance += Math.hypot(event.position.x - position.x, event.position.z - position.z);
+        if (event.type === 'AttackStarted') view.character.attack(animationTime);
+        if (event.type === 'TargetSelected') combatMessage = 'Target selected · Approach within melee range.';
+        if (event.type === 'DamageApplied') { encounter.hit(animationTime); combatMessage = `${event.amount} damage · Keep attacking.`; }
+        if (event.type === 'EntityKilled') combatMessage = 'Sentinel defeated · Approach the gold drop and collect.';
+        if (event.type === 'ItemPickedUp') combatMessage = `Collected ${LOOT_DEFINITIONS[event.item.definitionId].label} ×${event.item.quantity}`;
+        if (event.type === 'CommandRejected') combatMessage = ({ 'out-of-range': 'Move closer to your target or drop.', cooldown: 'Attack is cooling down.', 'invalid-target': 'Select a living target first.', 'loot-unavailable': 'No loot available.', 'dead-entity': 'This character cannot act.', 'unknown-entity': 'Character unavailable.', 'inventory-full': 'Session inventory is full.' })[event.reason];
+        if (event.type === 'PositionReset' && event.entityId === character.characterId) distance = 0;
+        if (event.type === 'EntityMoved' && event.entityId === character.characterId) distance += Math.hypot(event.position.x - position.x, event.position.z - position.z);
       }
       position = simulation.getEntity(character.characterId)!.transform.position;
       pendingReset = false;
@@ -95,6 +123,15 @@ async function start(): Promise<() => void> {
     view.character.display(displayPosition, mode === 'inspection' ? Math.PI : rotation, animationTime, mode === 'arena' && Math.hypot(frame.x, frame.z) > 0, mode === 'inspection' ? demonstration : 'idle');
     view.camera.setTarget(new Vector3(displayPosition.x, mode === 'inspection' && canvas.clientHeight < 520 ? 1.7 : 1, displayPosition.z), false, false, true);
     const storageLabel = repository.status === 'saved' ? 'Saved on this device' : repository.status === 'recovery' ? 'Saved character unavailable · session only' : 'This session only';
+    const enemy = simulation.getEntity(ARENA_ENEMY.id)!;
+    const loot = simulation.getLoot(); const inventory = simulation.getInventory(character.characterId);
+    const target = simulation.getEntity(character.characterId)!.combat?.targetId;
+    encounter.update(enemy, loot, target === enemy.id, mode === 'arena', animationTime);
+    hud.encounter(`Sentinel ${enemy.health.current}/${enemy.health.maximum} HP · ${target ? 'Target selected' : 'No target'} · Bag ${inventory.length}\n${combatMessage}`);
+    canvas.dataset['enemyHealth'] = String(enemy.health.current);
+    canvas.dataset['lootCount'] = String(loot.length);
+    canvas.dataset['inventoryCount'] = String(inventory.length);
+    canvas.dataset['combatMessage'] = combatMessage;
     hud.update(character, mode, demonstration, touch, storageLabel, distance);
     debugTimer += seconds;
     if (debugTimer >= 0.2) {
@@ -121,7 +158,7 @@ async function start(): Promise<() => void> {
   };
   const dispose = () => {
     if (disposed) return; disposed = true;
-    engine.stopRenderLoop(render); events.abort(); touchControls.dispose(); input.dispose(); detachTouchCamera(); assets.dispose(); hud.dispose(); view.dispose(); engine.dispose();
+    engine.stopRenderLoop(render); events.abort(); touchControls.dispose(); input.dispose(); detachTouchCamera(); assets.dispose(); encounter.dispose(); hud.dispose(); view.dispose(); engine.dispose();
     canvas.dataset['ready'] = 'false';
   };
   window.addEventListener('pagehide', (event) => { if (!event.persisted) dispose(); }, { signal: events.signal });

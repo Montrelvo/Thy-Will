@@ -72,7 +72,8 @@ simulation checkpoints, not authenticated cloud saves or multiplayer messages.
 The current random algorithm is lcg32; future algorithms require explicit version
 and restore support. The old advancePosition helper remains for compatibility.
 
-Only the latest command per entity is applied each tick; movement intents last
+Only the latest movement/reset command per entity is applied each tick;
+ordered combat actions are also processed; movement intents last
 one tick and are resubmitted by the client. Hosts must drain events regularly.
 Remote transport validation and authenticated command ownership remain future work.
 
@@ -111,10 +112,42 @@ Local character saves have no cross-device synchronization yet. Training gear
 choices are visual; inventory ownership/modifiers arrive in Step 5. Demonstrations
 have no damage or rewards; combat remains Step 4. No story content is fabricated.
 
-## Next — Step 4
+## Step 4 — First combat loop
 
-Implement attack, damage, enemy death, one loot table and pickup to inventory.
-Keep combat rules in the shared simulation and presentation driven by events.
+Authorized after PR #6 merged as `6f185996b76f2c6c75da5eeb921af37561224d05`.
+One stationary sentinel provides the first complete fight: select target, approach,
+attack, damage, death, deterministic weighted drop, and pickup to a session bag.
+
+Content defines 60 enemy HP, 20 melee damage, 2.6 m attack range, 20 ticks of
+cooldown and 2 m pickup range. Simulation validates living actors/targets, range,
+cooldown, bag capacity and drop availability. Same-tick actions stay ordered;
+movement intent cannot discard attacks. Dead targets cannot drop again, and
+pickup atomically removes the ground item and adds it to its owning inventory.
+
+The Babylon client displays enemy state, a selection ring, attack swing, hit flash,
+death collapse and a gold pickup. Keyboard, controller and GUI actions use the
+same commands. Inspection pauses ticks and hides the encounter; cosmetic swing
+previews remain isolated from combat and rewards. Mode switches preserve the bag.
+
+Snapshots/protocol move to version 2 with combat cooldown/target state, ground
+loot and owned inventory entries, with validated references and unique item IDs.
+Version 1 snapshots migrate with empty loot/inventories; original movement-only
+entities remain usable for movement. RNG restoration reproduces future drops.
+
+Validation: lint, strict types, boundaries, build, 18 headless tests, and browser
+acceptance for desktop/phone fight → kill → drop → pickup, landscape touch
+controls, controller combat edges and existing regression coverage (9 scenarios).
+Desktop, phone portrait and phone landscape screenshots were inspected.
+Physical controller/device validation remains a manual check.
+
+This slice has no enemy AI or retaliation. The bag is session-only and clears on
+reload; training equipment remains cosmetic. Full inventory/equipment and
+modifiers are Step 5. Account/cloud persistence and story content remain later.
+
+## Next — Step 5
+
+Inventory/equipment instances, modifiers and equip-derived character stats.
+Proceed after the Step 4 review and merge.
 
 ## Permissions
 

@@ -1,5 +1,6 @@
+export type CombatAction = 'target' | 'attack' | 'pickup';
 export interface InputFrame {
-  x: number; z: number; sprint: boolean; reset: boolean;
+  actions: CombatAction[]; x: number; z: number; sprint: boolean; reset: boolean;
   orbitX: number; orbitY: number; source: 'keyboard' | 'controller' | 'touch';
 }
 
@@ -12,6 +13,8 @@ export function deadzone(value: number, threshold = 0.18): number {
 export class InputController {
   private readonly keys = new Set<string>();
   private reset = false;
+  private actions: CombatAction[] = [];
+  private padHeld = new Set<number>();
   private resetHeld = false;
   private readonly touchKeys = new Set<'up' | 'down' | 'left' | 'right' | 'sprint'>();
   private readonly abort = new AbortController();
@@ -22,6 +25,10 @@ export class InputController {
       if (document.activeElement !== canvas) return;
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(event.code)) event.preventDefault();
       this.keys.add(event.code);
+      if (!event.repeat) {
+        const action = ({ KeyT: 'target', Space: 'attack', KeyE: 'pickup' } as Record<string, CombatAction>)[event.code];
+        if (action) this.actions.push(action);
+      }
       if (!event.repeat && event.code === 'KeyR') this.reset = true;
       if (!event.repeat && event.code === 'F3') { event.preventDefault(); toggleDebug(); }
     }, options);
@@ -35,7 +42,7 @@ export class InputController {
   setTouch(action: 'up' | 'down' | 'left' | 'right' | 'sprint', active: boolean): void {
     if (active) this.touchKeys.add(action); else this.touchKeys.delete(action);
   }
-  clear(): void { this.keys.clear(); this.touchKeys.clear(); this.reset = false; this.resetHeld = false; }
+  clear(): void { this.keys.clear(); this.touchKeys.clear(); this.reset = false; this.resetHeld = false; this.actions = []; this.padHeld.clear(); }
 
   sample(): InputFrame {
     const key = (...codes: string[]) => codes.some((code) => this.keys.has(code)) ? 1 : 0;
@@ -58,9 +65,15 @@ export class InputController {
       source = 'touch'; x = Number(this.touchKeys.has('right')) - Number(this.touchKeys.has('left'));
       z = Number(this.touchKeys.has('up')) - Number(this.touchKeys.has('down')); sprint = this.touchKeys.has('sprint');
     }
+    for (const [index, action] of [[2, 'target'], [0, 'attack'], [1, 'pickup']] as const) {
+      const pressed = focused && !!pad?.buttons[index]?.pressed;
+      if (pressed && !this.padHeld.has(index)) this.actions.push(action);
+      if (pressed) this.padHeld.add(index); else this.padHeld.delete(index);
+    }
+    const actions = this.actions; this.actions = [];
     const reset = this.reset || (padReset && !this.resetHeld);
     this.reset = false; this.resetHeld = padReset;
-    return { x, z, sprint, reset, orbitX, orbitY, source };
+    return { actions, x, z, sprint, reset, orbitX, orbitY, source };
   }
 
   dispose(): void { this.abort.abort(); this.clear(); }
