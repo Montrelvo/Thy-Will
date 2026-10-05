@@ -14,16 +14,21 @@
   ],
   "scripts": {
     "clean": "node scripts/clean.mjs",
-    "build": "tsc -b",
+    "build": "tsc -b && npm run build:web --workspace @thy-will/client",
     "typecheck": "tsc -b --pretty false && node scripts/check-boundaries.mjs",
     "lint": "eslint .",
     "test": "npm run build && node --test tests/*.test.mjs",
-    "check": "npm run lint && npm run typecheck && npm test"
+    "check": "npm run lint && npm run typecheck && npm test",
+    "dev": "npm run build:types && npm run dev --workspace @thy-will/client",
+    "build:types": "tsc -b",
+    "test:browser": "playwright test"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@playwright/test": "1.56.1",
     "eslint": "10.12.0",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.71.0"
+    "typescript-eslint": "8.71.0",
+    "vite": "8.3.2"
   }
 }

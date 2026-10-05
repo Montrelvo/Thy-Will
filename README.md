@@ -136,8 +136,8 @@ Everything else can grow outward from that foundation.
 
 ## Development setup
 
-Step 1 establishes six TypeScript workspaces. There is no playable scene yet;
-Babylon rendering and controls are the next step.
+Step 1 establishes six TypeScript workspaces. Step 2 adds the controllable
+Babylon.js training grounds, with movement state separate from presentation.
 
 Use Node.js 24 and npm 11 (the lockfile is generated with npm 11.9.0):
 
@@ -167,8 +167,59 @@ on protocol and content; neither can depend on applications. Package exports
 point to built ESM and declaration files, and project references order the build.
 No Firebase credentials, deployment secrets, or billing are needed for Step 1.
 
-GitHub Actions runs installation, lint, type checking, tests, and builds on pull
-requests and pushes to `main`. It does not deploy. See
+GitHub Actions runs installation, lint, type checking, headless tests, builds,
+and Chromium browser acceptance tests on pull requests and pushes to `main`. It does not deploy. See
 [sources/Implementation_Status.md](sources/Implementation_Status.md) for progress
 and [the complete handoff](sources/Thy_Will_Cloud_Architecture_Handoff.md) for the
 next steps.
+
+
+## Run the training grounds
+
+```sh
+npm ci
+npm run dev
+```
+
+Open `http://127.0.0.1:5173`. Click the canvas if it loses focus.
+
+| Action | Keyboard / mouse | Standard controller |
+| --- | --- | --- |
+| Move | WASD or arrow keys | Left stick |
+| Sprint | Hold Shift | Hold right bumper |
+| Orbit camera | Right mouse drag | Right stick |
+| Zoom | Mouse wheel | — |
+| Reset to spawn | R | Y / top face button |
+| Toggle debug overlay | F3 | — |
+
+Movement follows camera direction. The arena clamps movement at its edges;
+pillars and beacon are visual placeholders without collision. This milestone
+contains no combat, inventory, or cloud save.
+
+`npm run build` creates the static web app in `apps/client/web-dist` and compiled
+workspace modules in each `dist` directory. To run the production build:
+
+```sh
+npm run preview --workspace @thy-will/client
+```
+
+Browser acceptance tests:
+
+```sh
+npx playwright install chromium
+npm run build
+npm run test:browser
+```
+
+The scene uses WebGL with Babylon GUI for the HUD, a following orbit camera,
+local glTF beacon loaded through an asset manifest, and a placeholder capsule.
+Keyboard and standard gamepad input feed plain movement intent into a small
+headless movement boundary. Step 3 will connect this boundary to full entities,
+commands, events, and simulation ticks.
+
+The client alone uses `skipLibCheck` because Babylon's loader declarations conflict
+with `exactOptionalPropertyTypes`; application source remains strictly checked.
+Shared package declaration checking remains enabled. Controller acceptance tests
+use a simulated standard gamepad; physical controller validation remains a manual
+check. The pinned Playwright release has a downloadable Chromium build in the
+execution environment.

@@ -6,3 +6,6 @@ export const simulationCompatibility = Object.freeze({
   contentVersion: CONTENT_VERSION,
   protocolVersion: PROTOCOL_VERSION,
 });
+
+export { advancePosition, ARENA_LIMIT, WALK_SPEED, SPRINT_SPEED } from './movement.js';
+export type { Position, MovementIntent } from './movement.js';

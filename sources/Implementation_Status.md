@@ -2,43 +2,64 @@
 
 Updated: 2026-10-05
 
-## Step 1 — Establish monorepo
+## Step 1 — Complete
 
-Implemented npm workspaces for client, backend, game-server, simulation, protocol,
-and content; a cloud directory; shared strict TypeScript configuration; ESM
-package exports; ordered builds; lint, typecheck, test, and clean commands; a
-reproducible dependency lockfile; and GitHub Actions checks.
+Six npm workspaces, strict shared TypeScript configuration, reproducible lockfile,
+lint/typecheck/test/build commands, dependency boundary checks, and GitHub CI.
+The truncated repository handoff was restored from the complete attached source.
+Clean-clone verification and GitHub CI passed. Review: pull request #1.
 
-The original repository handoff was truncated in Section 20. It has been restored
-from the complete attached handoff, including the Step 1–17 plan.
+## Step 2 — Babylon client bootstrap
 
-The package entry points are bootstrap metadata only. They verify package wiring
-and separation and do not implement gameplay, a running backend, or networking.
-No cloud resources are provisioned.
+Implemented a Vite browser shell, Babylon WebGL engine, scene and resource
+lifecycle, following orbit camera, placeholder capsule player, bounded grid
+arena, four pillars, spawn pad, and a locally bundled glTF beacon.
 
-## Next — Step 2
+Keyboard and standard-controller input produce camera-relative movement intent.
+The headless simulation package updates plain position values; the presentation
+copies state into meshes. This small movement boundary precedes the full entity,
+command/event, random-service, serialization, and tick skeleton in Step 3.
 
-Add Babylon engine/scene lifecycle, camera, player and environment placeholders,
-keyboard/controller input, debug overlay, and asset-loading abstraction. Input
-must be separated from rendering, with rules in the shared simulation when Step 3
-adds entities, commands, events, and ticks.
+Controls: WASD/arrows move; Shift or RB sprint; R or Y reset; right mouse drag or
+right stick orbit; wheel zoom; F3 debug. Input clears on focus loss. Hidden tabs
+pause movement; elapsed time is capped to prevent resume teleports. HMR/navigation
+cleanup disposes input listeners, assets, GUI, scene, and engine. Back/forward
+cache preserves the scene. Asset failure is nonfatal and shown in debug status.
 
-## Permissions for later cloud work
+Babylon GUI displays the control guide, distance traveled, and optional debug
+information (FPS, mesh count, coordinates, input source, and asset state).
 
-Step 1 needs repository write access only. Creating Firebase projects,
-Authentication, Firestore, and Hosting at Step 7 requires an authorized Google
-account/project. Enabling paid services and billing at later steps requires the
-user's explicit authorization and cost controls. These are not prerequisites for
-Step 2.
+`npm run dev` opens development on port 5173. `npm run build` produces static
+`apps/client/web-dist` output; preview uses port 4173. GitHub CI also runs browser
+acceptance tests and uploads diagnostics on failure.
 
-## Verification
+## Validation
 
-A fresh Git clone passed `npm ci`, `npm run check`, and `npm run build`.
-ESLint, strict TypeScript checks, workspace import/dependency checks, and all three
-Node architecture tests passed. The cloud workflow is added but has not run on
-GitHub yet.
+Lint, strict source type checks, production build, and five headless tests pass.
+Chromium browser tests cover rendered startup and glTF loading, keyboard movement,
+sprint input, reset, focus loss, debug visibility, resize, simulated controller
+movement and held-reset behavior, and missing-asset fallback. Physical controller
+validation is a manual check. The rendered scene was inspected visually.
 
-Implementation branch: `codex/step-1-monorepo`.
-The user explicitly authorized publication of the complete handoff and source
-code to the public GitHub repository on 2026-10-05. Step 1 is ready for review;
-the next implementation milestone is the Babylon client bootstrap.
+Client declaration checking uses `skipLibCheck` for Babylon's upstream optional
+property type incompatibility; shared package declaration checking remains strict.
+Rendering is WebGL for this bootstrap. WebGPU selection can be introduced later.
+Visual props have no obstacle collision; only arena bounds constrain movement.
+No combat, inventory, persistence, or cloud resources are implemented yet.
+
+## Next — Step 3
+
+Add EntityId, entities, transforms, stats, health, commands/events, simulation tick,
+random service abstraction, and serialization. Keep rules headless and connect
+the client through that shared simulation interface.
+
+## Permissions
+
+Repository publication is authorized. Firebase/Google project access is needed
+at Step 7; paid services and billing require explicit authorization later.
+
+## Step 2 publication status
+
+The user explicitly authorized publishing the Step 2 source and asset to the
+public repository and opening its draft pull request on 2026-10-05.
+Implementation branch: `codex/step-2-babylon-client`, based on the Step 1 branch.

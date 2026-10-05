@@ -8,7 +8,12 @@
       "ES2022",
       "DOM",
       "DOM.Iterable"
-    ]
+    ],
+    "types": [
+      "@webgpu/types",
+      "vite/client"
+    ],
+    "skipLibCheck": true
   },
   "include": [
     "src/**/*.ts"
