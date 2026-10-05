@@ -30,7 +30,10 @@ async function start(): Promise<() => void> {
   let demonstration: Demonstration = 'idle';
   const view = createTrainingScene(engine, canvas);
   let assetRoots: TransformNode[] = [];
-  const assets = new AssetLoader(view.scene, { beacon: { rootUrl: `${import.meta.env.BASE_URL}assets/`, fileName: 'beacon.gltf' } });
+  const assets = new AssetLoader(view.scene, { beacon: { rootUrl: `${import.meta.env.BASE_URL}assets/`, fileName: 'beacon.gltf' },
+    'knight-slate': { rootUrl: `${import.meta.env.BASE_URL}assets/kaykit/`, fileName: 'knight-slate.glb' },
+    'knight-crimson': { rootUrl: `${import.meta.env.BASE_URL}assets/kaykit/`, fileName: 'knight-crimson.glb' },
+  });
   const simulation = new Simulation(); simulation.spawn(characterEntity(character)); simulation.spawn(createArenaEnemy()); simulation.drainEvents();
   const encounter = createEncounterPresentation(view.scene);
   let pendingActions: CombatAction[] = [];
@@ -139,6 +142,7 @@ async function start(): Promise<() => void> {
       hud.debug.text = `WebGL ${engine.webGLVersion} · ${engine.getFps().toFixed(0)} FPS · ${view.scene.meshes.length} meshes\nPosition ${position.x.toFixed(2)}, ${position.z.toFixed(2)} · ${frame.source}\nAsset: ${assetState} · Solo simulation authority · tick ${simulation.tick}`;
     }
     // Read-only diagnostics also support browser acceptance tests.
+    canvas.dataset['characterAnimation'] = view.character.animation;
     canvas.dataset['characterId'] = character.characterId;
     canvas.dataset['palette'] = character.appearance.palette;
     canvas.dataset['weapon'] = character.equipment.weapon ?? 'none';
@@ -173,6 +177,12 @@ async function start(): Promise<() => void> {
   } catch (error) {
     if (disposed) return dispose;
     assetState = 'unavailable'; console.warn('Optional beacon asset could not load', error);
+  }
+  try {
+    const [slate, crimson] = await Promise.all([assets.load('knight-slate'), assets.load('knight-crimson')]);
+    if (!disposed) { view.character.attach(slate, crimson); canvas.dataset['characterAsset'] = 'kaykit'; }
+  } catch (error) {
+    if (!disposed) { canvas.dataset['characterAsset'] = 'fallback'; console.warn('Character asset unavailable', error); }
   }
   if (!disposed) { status.hidden = true; canvas.dataset['ready'] = 'true'; canvas.dataset['asset'] = assetState; }
   return dispose;
