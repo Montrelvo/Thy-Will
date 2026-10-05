@@ -1,5 +1,6 @@
-const canvas = document.querySelector<HTMLCanvasElement>('#game');
-if (!canvas) throw new Error('Mobile preview canvas is missing');
+const previewCanvas = document.querySelector<HTMLCanvasElement>('#game');
+if (!previewCanvas) throw new Error('Mobile preview canvas is missing');
+const canvas: HTMLCanvasElement = previewCanvas;
 
 const activeTouches = new Map<number, { x: number; y: number }>();
 let lastPinchDistance: number | undefined;
@@ -21,6 +22,7 @@ function syntheticPointer(type: string, source: PointerEvent, buttons: number): 
 function pinchDistance(): number | undefined {
   if (activeTouches.size < 2) return undefined;
   const [a, b] = Array.from(activeTouches.values());
+  if (!a || !b) return undefined;
   return Math.hypot(b.x - a.x, b.y - a.y);
 }
 
