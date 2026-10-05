@@ -251,7 +251,8 @@ execution environment.
 
 The knight uses modified KayKit Adventurers assets by **Kay Lousberg**, licensed
 under CC0. Original license: `sources/art/KayKit-LICENSE.txt`. The client ships
-self-contained slate/crimson GLBs and retains a procedural load-failure fallback.
+self-contained slate/crimson GLBs and reports artwork load failures explicitly. Player views do not silently
+substitute the procedural proof-of-concept knight.
 
 See [Step 4.5](sources/Art_Development_Step_4_5.md) for the art direction, pinned
 sources, headless Blender commands and phone-accessible GitHub rebuild workflow.

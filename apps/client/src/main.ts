@@ -182,7 +182,11 @@ async function start(): Promise<() => void> {
     const [slate, crimson] = await Promise.all([assets.load('knight-slate'), assets.load('knight-crimson')]);
     if (!disposed) { view.character.attach(slate, crimson); canvas.dataset['characterAsset'] = 'kaykit'; }
   } catch (error) {
-    if (!disposed) { canvas.dataset['characterAsset'] = 'fallback'; console.warn('Character asset unavailable', error); }
+    if (disposed) return dispose;
+    console.warn('Character artwork unavailable', error);
+    canvas.dataset['characterAsset'] = 'unavailable';
+    dispose();
+    throw new Error('Character artwork could not load. Please reload to retry.', { cause: error });
   }
   if (!disposed) { status.hidden = true; canvas.dataset['ready'] = 'true'; canvas.dataset['asset'] = assetState; }
   return dispose;

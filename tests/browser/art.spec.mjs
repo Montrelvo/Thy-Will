@@ -20,12 +20,10 @@ test('imported KayKit rig plays preview and arena movement clips, with both pale
   expect(errors).toEqual([]);
 });
 
-test('missing knight asset leaves the procedural character and arena usable', async ({ page }) => {
+test('missing knight artwork is reported instead of silently showing proof-of-concept models', async ({ page }) => {
   await page.route('**/assets/kaykit/knight-*.glb', route => route.fulfill({ status: 404, body: 'missing' }));
-  await page.goto('/'); const canvas = page.locator('#game');
-  await expect(canvas).toHaveAttribute('data-ready', 'true');
-  await expect(canvas).toHaveAttribute('data-character-asset', 'fallback');
-  await page.keyboard.down('w');
-  await expect.poll(async () => Number(await canvas.getAttribute('data-position-z'))).toBeGreaterThan(0.5);
-  await page.keyboard.up('w');
+  await page.goto('/');
+  await expect(page.locator('#status')).toHaveText('Character artwork could not load. Please reload to retry.');
+  await expect(page.locator('#game')).toHaveAttribute('data-character-asset', 'unavailable');
+  await expect(page.locator('#game')).toHaveAttribute('data-ready', 'false');
 });

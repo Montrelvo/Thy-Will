@@ -2,13 +2,10 @@ import { TransformNode } from '@babylonjs/core/Meshes/transformNode.js';
 import type { AssetContainer } from '@babylonjs/core/assetContainer.js';
 import type { Scene } from '@babylonjs/core/scene.js';
 import type { CharacterRecord, Position } from '@thy-will/simulation';
-import { createProceduralCharacterPresentation } from './procedural-character.js';
-export type { Demonstration } from './procedural-character.js';
-import type { Demonstration } from './procedural-character.js';
+export type Demonstration = 'idle' | 'run' | 'swing';
 
-/** Both modes reuse the same imported rig; fallback remains available on load failure. */
+/** Player views use the imported rig exclusively; loading failures are explicit. */
 export function createCharacterPresentation(scene: Scene) {
-  const fallback = createProceduralCharacterPresentation(scene);
   const root = new TransformNode('kaykit-character', scene);
   const variants = new Map<CharacterRecord['appearance']['palette'], AssetContainer>();
   let record: CharacterRecord | undefined;
@@ -26,7 +23,7 @@ export function createCharacterPresentation(scene: Scene) {
     }
   };
   return {
-    get animation() { return clip || 'procedural'; },
+    get animation() { return clip || 'loading'; },
     attach(slate: AssetContainer, crimson: AssetContainer) {
       for (const [palette, container] of [['slate', slate], ['crimson', crimson]] as const) {
         container.addAllToScene(); container.animationGroups.forEach(group => group.stop());
@@ -39,12 +36,12 @@ export function createCharacterPresentation(scene: Scene) {
         }
         variants.set(palette, container);
       }
-      fallback.dispose(); applyRecord();
+      applyRecord();
     },
-    attack(time: number) { attackAt = time; if (!current) fallback.attack(time); clip = ''; },
-    updateCharacter(value: CharacterRecord) { record = value; if (variants.size !== 2) fallback.updateCharacter(value); applyRecord(); },
+    attack(time: number) { attackAt = time; clip = ''; },
+    updateCharacter(value: CharacterRecord) { record = value; applyRecord(); },
     display(position: Position, rotation: number, time: number, moving: boolean, demo: Demonstration) {
-      if (!current) { fallback.display(position, rotation, time, moving, demo); return; }
+      if (!current) return;
       root.position.set(position.x, 0, position.z); root.rotation.y = rotation;
       const attacking = time - attackAt < 0.4;
       const next = demo === 'swing' || attacking ? (record?.equipment.weapon ? '1H_Melee_Attack_Chop' : 'Unarmed_Melee_Attack_Punch_A') : moving || demo === 'run' ? 'Running_A' : 'Idle';
@@ -55,6 +52,6 @@ export function createCharacterPresentation(scene: Scene) {
         clip = next;
       }
     },
-    dispose() { if (!current) fallback.dispose(); root.dispose(); },
+    dispose() { root.dispose(); },
   };
 }

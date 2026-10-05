@@ -182,3 +182,17 @@ at Step 7; paid services and billing require explicit authorization later.
 The user explicitly authorized publishing the Step 2 source and asset to the
 public repository and opening its draft pull request on 2026-10-05.
 Implementation branch: `codex/step-2-babylon-client`, based on the Step 1 branch.
+
+## Player / developer viewport separation
+
+After the Step 4.5 merge, the live Pages HTML, JavaScript and both processed knight
+models were verified. A fresh mobile Chromium session reported `characterAsset =
+kaykit`, `characterAnimation = Idle` and a ready scene; its screenshot showed the
+imported knight. The stationary enemy and arena are still placeholder art.
+
+Player model failures now stop startup with an explicit retry message, rather
+than silently replacing the knight with procedural artwork. Pages deploys only
+main, verifies both shipped GLBs and publishes build-info.json with its exact
+commit. Separate developer-only source and viewport are prepared outside this
+public repository for a new private repository; private hosting must also require
+authentication. No developer-only review tools are added to public Pages.

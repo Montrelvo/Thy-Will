@@ -52,7 +52,8 @@ for safe archive extraction.
 - Babylon inspection and arena use the imported character and profile choices.
 - Idle/run/swing previews and attack commands animate the rig without adding
   simulation rules to meshes. Equipment toggles hide the correct accessories.
-- Missing character assets retain a controllable procedural fallback.
+- Missing character assets show an explicit load error instead of substituting
+  proof-of-concept artwork in the player viewport.
 - Desktop, phone portrait and landscape remain usable; combat regression passes.
 - Sources, processing scripts, license and build workflow are versioned.
 
