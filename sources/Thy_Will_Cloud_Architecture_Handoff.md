@@ -1158,6 +1158,23 @@ Acceptance criteria:
 - simulation can execute in Node without Babylon or DOM
 - tests can spawn entities, apply commands, and inspect events
 
+## Steps 3.2–3.8 — Character and Device Bridge
+
+Approved on 2026-10-05 before proceeding to Step 4:
+
+- **3.2:** Versioned character record, stable ID, future account association,
+  local persistence, appearance, training loadout and progression fields.
+- **3.4:** Shared Babylon character presentation, equipment visuals, movement
+  animation and cosmetic run/swing demonstrations.
+- **3.6:** Inspection and arena modes sharing one character, with a reserved
+  unavailable story-stage entry.
+- **3.8:** Responsive Babylon GUI, touch orbit/pinch, arena touch controls,
+  keyboard/controller support and adaptive rendering scale.
+
+Implementation and acceptance plan: `sources/Character_Modes_Progression_Plan.md`.
+Cross-device account synchronization remains in Steps 7–8. Inventory modifiers
+remain in Step 5; demonstrations have no combat consequences until Step 4.
+
 ## Step 4 — First Combat Loop
 
 Implement in simulation:

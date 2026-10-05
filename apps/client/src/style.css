@@ -4,3 +4,5 @@ html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
 #game { display: block; width: 100%; height: 100%; outline: none; touch-action: none; }
 #status { position: fixed; inset: 0; display: grid; place-content: center; padding: 32px; color: #d4dce7; background: #0b101c; text-align: center; }
 #status[hidden] { display: none; }
+
+body { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }

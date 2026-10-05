@@ -1,70 +1,38 @@
-const previewCanvas = document.querySelector<HTMLCanvasElement>('#game');
-if (!previewCanvas) throw new Error('Mobile preview canvas is missing');
-const canvas: HTMLCanvasElement = previewCanvas;
+import type { ArcRotateCamera } from '@babylonjs/core/Cameras/arcRotateCamera.js';
 
-const activeTouches = new Map<number, { x: number; y: number }>();
-let lastPinchDistance: number | undefined;
-
-function syntheticPointer(type: string, source: PointerEvent, buttons: number): void {
-  canvas.dispatchEvent(new PointerEvent(type, {
-    bubbles: true,
-    cancelable: true,
-    pointerId: source.pointerId + 10000,
-    pointerType: 'mouse',
-    isPrimary: true,
-    button: 2,
-    buttons,
-    clientX: source.clientX,
-    clientY: source.clientY,
-  }));
-}
-
-function pinchDistance(): number | undefined {
-  if (activeTouches.size < 2) return undefined;
-  const [a, b] = Array.from(activeTouches.values());
-  if (!a || !b) return undefined;
-  return Math.hypot(b.x - a.x, b.y - a.y);
-}
-
-canvas.addEventListener('pointerdown', (event) => {
-  if (event.pointerType !== 'touch') return;
-  event.preventDefault();
-  activeTouches.set(event.pointerId, { x: event.clientX, y: event.clientY });
-  if (activeTouches.size === 1) syntheticPointer('pointerdown', event, 2);
-  lastPinchDistance = pinchDistance();
-}, { capture: true });
-
-canvas.addEventListener('pointermove', (event) => {
-  if (event.pointerType !== 'touch' || !activeTouches.has(event.pointerId)) return;
-  event.preventDefault();
-  activeTouches.set(event.pointerId, { x: event.clientX, y: event.clientY });
-  const distance = pinchDistance();
-  if (distance !== undefined && lastPinchDistance !== undefined) {
-    const delta = distance - lastPinchDistance;
-    if (Math.abs(delta) > 1) {
-      canvas.dispatchEvent(new WheelEvent('wheel', {
-        bubbles: true,
-        cancelable: true,
-        clientX: event.clientX,
-        clientY: event.clientY,
-        deltaY: -delta * 2.5,
-      }));
+/** Native pointers retain all touches; Babylon GUI hit tests exclude its controls. */
+export function attachTouchCamera(camera: ArcRotateCamera, canvas: HTMLCanvasElement, blocksPointer: (x: number, y: number) => boolean): () => void {
+  const touches = new Map<number, { x: number; y: number }>();
+  let pinch: number | undefined;
+  const abort = new AbortController(); const options = { signal: abort.signal };
+  const distance = () => {
+    const [a, b] = [...touches.values()]; return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : undefined;
+  };
+  canvas.addEventListener('pointerdown', event => {
+    const rect = canvas.getBoundingClientRect();
+    if (event.pointerType !== 'touch' || blocksPointer(event.clientX - rect.left, event.clientY - rect.top)) return;
+    touches.set(event.pointerId, { x: event.clientX, y: event.clientY }); pinch = distance();
+    canvas.setPointerCapture(event.pointerId);
+  }, options);
+  canvas.addEventListener('pointermove', event => {
+    const before = touches.get(event.pointerId); if (!before) return;
+    touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const next = distance();
+    if (next !== undefined && pinch !== undefined) {
+      camera.radius = Math.max(camera.lowerRadiusLimit ?? 3, Math.min(camera.upperRadiusLimit ?? 36, camera.radius - (next - pinch) * 0.035));
       canvas.dataset['mobileZoomGesture'] = 'true';
+    } else if (touches.size === 1) {
+      camera.alpha -= (event.clientX - before.x) * 0.008;
+      camera.beta = Math.max(0.35, Math.min(1.2, camera.beta - (event.clientY - before.y) * 0.008));
+      canvas.dataset['mobileOrbitGesture'] = 'true';
     }
-  } else if (activeTouches.size === 1) {
-    syntheticPointer('pointermove', event, 2);
-    canvas.dataset['mobileOrbitGesture'] = 'true';
-  }
-  lastPinchDistance = distance;
-}, { capture: true });
-
-function endTouch(event: PointerEvent): void {
-  if (event.pointerType !== 'touch' || !activeTouches.has(event.pointerId)) return;
-  event.preventDefault();
-  if (activeTouches.size === 1) syntheticPointer('pointerup', event, 0);
-  activeTouches.delete(event.pointerId);
-  lastPinchDistance = pinchDistance();
+    pinch = next;
+  }, options);
+  const end = (event: PointerEvent) => { touches.delete(event.pointerId); pinch = distance(); };
+  window.addEventListener('pointerup', end, options); window.addEventListener('pointercancel', end, options);
+  canvas.addEventListener('lostpointercapture', end, options);
+  const clear = () => { touches.clear(); pinch = undefined; };
+  window.addEventListener('blur', clear, options);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) clear(); }, options);
+  return () => { abort.abort(); clear(); };
 }
-
-canvas.addEventListener('pointerup', endTouch, { capture: true });
-canvas.addEventListener('pointercancel', endTouch, { capture: true });

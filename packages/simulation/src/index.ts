@@ -14,3 +14,5 @@ export { SeededRandom } from './random.js';
 export type { RandomService } from './random.js';
 export { parseSnapshot, serializeSnapshot, deserializeSnapshot } from './snapshot.js';
 export type { EntityId, Entity, Transform, Stats, Health, GameCommand, GameEvent, WorldSnapshot } from '@thy-will/protocol';
+export { CHARACTER_VERSION, parseCharacter, createCharacter, characterEntity } from './character.js';
+export type { CharacterRecord, CharacterPalette } from './character.js';

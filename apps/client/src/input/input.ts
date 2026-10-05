@@ -1,6 +1,6 @@
 export interface InputFrame {
   x: number; z: number; sprint: boolean; reset: boolean;
-  orbitX: number; orbitY: number; source: 'keyboard' | 'controller';
+  orbitX: number; orbitY: number; source: 'keyboard' | 'controller' | 'touch';
 }
 
 export function deadzone(value: number, threshold = 0.18): number {
@@ -13,6 +13,7 @@ export class InputController {
   private readonly keys = new Set<string>();
   private reset = false;
   private resetHeld = false;
+  private readonly touchKeys = new Set<'up' | 'down' | 'left' | 'right' | 'sprint'>();
   private readonly abort = new AbortController();
 
   constructor(private readonly canvas: HTMLCanvasElement, toggleDebug: () => void) {
@@ -31,7 +32,10 @@ export class InputController {
     canvas.addEventListener('blur', () => this.clear(), options);
   }
 
-  clear(): void { this.keys.clear(); this.reset = false; this.resetHeld = false; }
+  setTouch(action: 'up' | 'down' | 'left' | 'right' | 'sprint', active: boolean): void {
+    if (active) this.touchKeys.add(action); else this.touchKeys.delete(action);
+  }
+  clear(): void { this.keys.clear(); this.touchKeys.clear(); this.reset = false; this.resetHeld = false; }
 
   sample(): InputFrame {
     const key = (...codes: string[]) => codes.some((code) => this.keys.has(code)) ? 1 : 0;
@@ -49,6 +53,10 @@ export class InputController {
       if (Math.hypot(px, pz) > 0 || Math.hypot(orbitX, orbitY) > 0 || padReset || pad.buttons[5]?.pressed) {
         source = 'controller'; x = px; z = pz; sprint = !!pad.buttons[5]?.pressed;
       }
+    }
+    if (this.touchKeys.size) {
+      source = 'touch'; x = Number(this.touchKeys.has('right')) - Number(this.touchKeys.has('left'));
+      z = Number(this.touchKeys.has('up')) - Number(this.touchKeys.has('down')); sprint = this.touchKeys.has('sprint');
     }
     const reset = this.reset || (padReset && !this.resetHeld);
     this.reset = false; this.resetHeld = padReset;
