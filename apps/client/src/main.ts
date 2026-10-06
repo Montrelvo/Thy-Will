@@ -104,6 +104,11 @@ async function start(): Promise<() => void> {
           if (lootId) simulation.apply({ type: 'PickUp', entityId: character.characterId, lootId });
           else combatMessage = 'No loot available.';
         }
+        if (action === 'equip') {
+          const item = simulation.getInventory(character.characterId).find(candidate => candidate.definitionId === 'worn-blade');
+          if (item) simulation.apply({ type: 'EquipItem', entityId: character.characterId, itemId: item.id });
+          else combatMessage = 'No equippable weapon in the bag.';
+        }
       }
       pendingActions = [];
       simulation.step();
@@ -113,7 +118,8 @@ async function start(): Promise<() => void> {
         if (event.type === 'DamageApplied') { encounter.hit(animationTime); combatMessage = `${event.amount} damage · Keep attacking.`; }
         if (event.type === 'EntityKilled') combatMessage = 'Sentinel defeated · Approach the gold drop and collect.';
         if (event.type === 'ItemPickedUp') combatMessage = `Collected ${LOOT_DEFINITIONS[event.item.definitionId].label} ×${event.item.quantity}`;
-        if (event.type === 'CommandRejected') combatMessage = ({ 'out-of-range': 'Move closer to your target or drop.', cooldown: 'Attack is cooling down.', 'invalid-target': 'Select a living target first.', 'loot-unavailable': 'No loot available.', 'dead-entity': 'This character cannot act.', 'unknown-entity': 'Character unavailable.', 'inventory-full': 'Session inventory is full.' })[event.reason];
+        if (event.type === 'ItemEquipped') combatMessage = 'Equipped Worn blade · Derived attack damage increased.';
+        if (event.type === 'CommandRejected') combatMessage = ({ 'out-of-range': 'Move closer to your target or drop.', cooldown: 'Attack is cooling down.', 'invalid-target': 'Select a living target first.', 'loot-unavailable': 'No loot available.', 'dead-entity': 'This character cannot act.', 'unknown-entity': 'Character unavailable.', 'inventory-full': 'Session inventory is full.', 'item-unavailable': 'That item is not in the bag.', 'item-not-equippable': 'That item cannot be equipped.' })[event.reason];
         if (event.type === 'PositionReset' && event.entityId === character.characterId) distance = 0;
         if (event.type === 'EntityMoved' && event.entityId === character.characterId) distance += Math.hypot(event.position.x - position.x, event.position.z - position.z);
       }
@@ -128,13 +134,16 @@ async function start(): Promise<() => void> {
     const storageLabel = repository.status === 'saved' ? 'Saved on this device' : repository.status === 'recovery' ? 'Saved character unavailable · session only' : 'This session only';
     const enemy = simulation.getEntity(ARENA_ENEMY.id)!;
     const loot = simulation.getLoot(); const inventory = simulation.getInventory(character.characterId);
+    const equipment = simulation.getEquipment(character.characterId); const derived = simulation.getDerivedStats(character.characterId)!;
     const target = simulation.getEntity(character.characterId)!.combat?.targetId;
     encounter.update(enemy, loot, target === enemy.id, mode === 'arena', animationTime);
-    hud.encounter(`Sentinel ${enemy.health.current}/${enemy.health.maximum} HP · ${target ? 'Target selected' : 'No target'} · Bag ${inventory.length}\n${combatMessage}`);
+    hud.encounter(`Sentinel ${enemy.health.current}/${enemy.health.maximum} HP · ${target ? 'Target selected' : 'No target'} · Bag ${inventory.length} · Weapon ${equipment.weapon ? 'Worn blade' : 'none'} · Damage ${derived.attackDamage}\n${combatMessage}`);
     canvas.dataset['enemyHealth'] = String(enemy.health.current);
     canvas.dataset['lootCount'] = String(loot.length);
     canvas.dataset['inventoryCount'] = String(inventory.length);
     canvas.dataset['combatMessage'] = combatMessage;
+    canvas.dataset['equippedWeapon'] = equipment.weapon ?? 'none';
+    canvas.dataset['attackDamage'] = String(derived.attackDamage);
     hud.update(character, mode, demonstration, touch, storageLabel, distance);
     debugTimer += seconds;
     if (debugTimer >= 0.2) {
