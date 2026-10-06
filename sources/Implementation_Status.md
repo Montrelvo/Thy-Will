@@ -187,8 +187,11 @@ snapshots. A host-supplied validation hook is available for later server authori
 
 The Babylon client only requests simulation-reported craft options and displays
 results. Recipe costs, mutation logic, RNG and validation remain outside the UI.
-No test files are modified as part of this step; repository CI is allowed to run
-unchanged and its result is reported without reactive test adjustments.
+Step 6 adds focused headless crafting coverage for material consumption, item-ID
+uniqueness, modifier/effect operations, deterministic rerolls, derived stats,
+transactional rejection, server-validation hooks and schema migration. Tests are
+maintained as part of implementation; after publication, CI results are reported
+without reactive test changes made solely to obtain a passing result.
 
 ## Next — Step 7
 
