@@ -100,6 +100,7 @@ test('Step 5 equipment instances change derived stats and combat without moving 
   const nextEnemy = createArenaEnemy(); nextEnemy.id = 'second-sentinel'; nextEnemy.transform.position.z = 2.2;
   restored.spawn(nextEnemy); restored.drainEvents();
   action(restored, 'Target', { targetId: 'second-sentinel' });
+  ready(restored);
   const hit = action(restored, 'Attack').find(event => event.type === 'DamageApplied');
   assert.equal(hit.amount, 30);
   assert.equal(restored.getEntity('second-sentinel').health.current, 30);
