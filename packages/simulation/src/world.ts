@@ -221,8 +221,14 @@ export class Simulation {
       for (const operation of recipe.operations) {
         if (operation.type === 'combine-components') {
           if (working.length >= 128) throw new Error('inventory-full');
+          let sequence = 0;
+          let itemId = `craft-${entity.id}-${this.tick}-${sequence}`;
+          while (working.some(item => item.id === itemId) || createdItems.some(item => item.id === itemId)) {
+            sequence++;
+            itemId = `craft-${entity.id}-${this.tick}-${sequence}`;
+          }
           const created: CollectedItem = {
-            id: `craft-${entity.id}-${this.tick}-${working.length + createdItems.length}`,
+            id: itemId,
             definitionId: operation.output.definitionId,
             quantity: operation.output.quantity,
             affixes: [],
