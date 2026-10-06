@@ -60,7 +60,7 @@ function item(value: unknown, legacyAffixes = false, legacyEffects = false): Col
   const data = record(value);
   if (data['definitionId'] !== 'iron-shard' && data['definitionId'] !== 'refined-iron' && data['definitionId'] !== 'worn-blade') throw new TypeError('Unknown loot definition');
   const affixes = legacyAffixes ? [] : collection(data['affixes'], 8).map(affix);
-  const effects = legacyEffects ? [] : collection(data['effects'], 4).map(effect);
+  const effects = legacyEffects || data['effects'] === undefined ? [] : collection(data['effects'], 4).map(effect);
   return { id: id(data['id'], 256), definitionId: data['definitionId'], quantity: integer(data['quantity'], 1, 999), affixes, effects };
 }
 
