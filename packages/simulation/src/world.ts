@@ -46,6 +46,24 @@ function consumeCosts(inventory: CollectedItem[], costs: readonly { definitionId
   }
 }
 
+type CraftOperation = (typeof CRAFTING_RECIPES)[keyof typeof CRAFTING_RECIPES]['operations'][number];
+
+function canApplyOperation(target: CollectedItem | null, operation: CraftOperation): boolean {
+  if (operation.type === 'combine-components') return true;
+  if (!target) return false;
+  if (operation.type === 'add-modifier') return target.affixes.length < 8 && !target.affixes.some(affix => affix.id === operation.affixId);
+  if (operation.type === 'upgrade-value') {
+    const affix = target.affixes.find(candidate => candidate.id === operation.affixId);
+    return !!affix && affix.roll < operation.maximum;
+  }
+  if (operation.type === 'replace-modifier') {
+    const index = target.affixes.findIndex(candidate => candidate.id === operation.fromAffixId);
+    return index >= 0 && !target.affixes.some((candidate, i) => i !== index && candidate.id === operation.toAffixId);
+  }
+  if (operation.type === 'reroll-modifier') return operation.affixIndex >= 0 && operation.affixIndex < target.affixes.length && operation.pool.length > 0;
+  return target.effects.length < 4 && !target.effects.includes(operation.effectId);
+}
+
 export class Simulation {
   private readonly entities = new Map<EntityId, Entity>();
   private readonly loot = new Map<string, LootDrop>();
@@ -114,9 +132,13 @@ export class Simulation {
       const recipe = CRAFTING_RECIPES[recipeId];
       if (!hasCosts(inventory, recipe.costs)) continue;
       if (recipe.targetDefinitionId === null) {
-        options.push({ recipeId, targetItemId: null });
+        if (recipe.operations.every(operation => canApplyOperation(null, operation))) options.push({ recipeId, targetItemId: null });
       } else {
-        for (const item of inventory) if (item.definitionId === recipe.targetDefinitionId) options.push({ recipeId, targetItemId: item.id });
+        for (const item of inventory) {
+          if (item.definitionId === recipe.targetDefinitionId && recipe.operations.every(operation => canApplyOperation(item, operation))) {
+            options.push({ recipeId, targetItemId: item.id });
+          }
+        }
       }
     }
     return options;
@@ -187,10 +209,12 @@ export class Simulation {
       targetItem: target ? cloneItem(target) : null,
       inventory: source.map(cloneItem),
     };
+    if (!recipe.operations.every(operation => canApplyOperation(target, operation))) { this.reject(entity.id, 'crafting-operation-invalid'); return; }
     if (this.craftValidator && !this.craftValidator(context)) { this.reject(entity.id, 'crafting-validation-failed'); return; }
 
     const working = source.map(cloneItem);
     const workingTarget = target ? working.find(item => item.id === target.id) ?? null : null;
+    consumeCosts(working, recipe.costs);
     const createdItems: CollectedItem[] = [];
 
     try {
@@ -235,7 +259,6 @@ export class Simulation {
       return;
     }
 
-    consumeCosts(working, recipe.costs);
     this.inventories.set(entity.id, working);
     this.events.push({
       type: 'ItemCrafted',
