@@ -139,7 +139,6 @@ test('invalid operations and validation hooks reject transactionally without con
 test('schema 3 items migrate effects while schema 4 requires the current item shape', () => {
   const world = worldWith([
     item('blade', 'worn-blade', 1, [{ id: 'keen', roll: 1 }]),
-    item('refined', 'refined-iron', 1),
   ]);
   const current = world.snapshot();
 
