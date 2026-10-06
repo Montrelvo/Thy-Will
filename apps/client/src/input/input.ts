@@ -1,4 +1,4 @@
-export type CombatAction = 'target' | 'attack' | 'pickup' | 'equip';
+export type CombatAction = 'target' | 'attack' | 'pickup' | 'equip' | 'craft';
 export interface InputFrame {
   actions: CombatAction[]; x: number; z: number; sprint: boolean; reset: boolean;
   orbitX: number; orbitY: number; source: 'keyboard' | 'controller' | 'touch';
@@ -26,7 +26,7 @@ export class InputController {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(event.code)) event.preventDefault();
       this.keys.add(event.code);
       if (!event.repeat) {
-        const action = ({ KeyT: 'target', Space: 'attack', KeyE: 'pickup', KeyQ: 'equip' } as Record<string, CombatAction>)[event.code];
+        const action = ({ KeyT: 'target', Space: 'attack', KeyE: 'pickup', KeyQ: 'equip', KeyC: 'craft' } as Record<string, CombatAction>)[event.code];
         if (action) this.actions.push(action);
       }
       if (!event.repeat && event.code === 'KeyR') this.reset = true;
@@ -65,7 +65,7 @@ export class InputController {
       source = 'touch'; x = Number(this.touchKeys.has('right')) - Number(this.touchKeys.has('left'));
       z = Number(this.touchKeys.has('up')) - Number(this.touchKeys.has('down')); sprint = this.touchKeys.has('sprint');
     }
-    for (const [index, action] of [[2, 'target'], [0, 'attack'], [1, 'pickup'], [4, 'equip']] as const) {
+    for (const [index, action] of [[2, 'target'], [0, 'attack'], [1, 'pickup'], [4, 'equip'], [3, 'craft']] as const) {
       const pressed = focused && !!pad?.buttons[index]?.pressed;
       if (pressed && !this.padHeld.has(index)) this.actions.push(action);
       if (pressed) this.padHeld.add(index); else this.padHeld.delete(index);
