@@ -16,7 +16,7 @@ export interface InterfaceActions {
   shield(): void;
   demonstration(value: Demonstration): void;
   reset(): void;
-  combat(action: 'target' | 'attack' | 'pickup'): void;
+  combat(action: 'target' | 'attack' | 'pickup' | 'equip' | 'craft'): void;
 }
 export function createInterface(scene: Scene, actions: InterfaceActions) {
   let compact = false;
@@ -41,7 +41,7 @@ export function createInterface(scene: Scene, actions: InterfaceActions) {
   const summary = text('summary', '', 94, 13);
   const instructions = text('instructions', '', 123, 12); instructions.color = '#9db0c6';
   const combatStatus = text('combat-status', '', 154, 12); combatStatus.height = '54px';
-  const combatButtons = [button('target', 'Target · T', 12, 216, () => actions.combat('target')), button('attack', 'Attack · Space', 120, 216, () => actions.combat('attack')), button('pickup', 'Loot · E', 228, 216, () => actions.combat('pickup'))];
+  const combatButtons = [button('target', 'Target · T', 12, 216, () => actions.combat('target')), button('attack', 'Attack · Space', 120, 216, () => actions.combat('attack')), button('pickup', 'Loot · E', 228, 216, () => actions.combat('pickup')), button('equip', 'Equip · Q', 336, 216, () => actions.combat('equip')), button('craft', 'Craft · C', 444, 216, () => actions.combat('craft'))];
   const debug = text('debug', '', 264, 11); debug.height = '60px'; debug.isVisible = false;
   const panel = new Rectangle('character-panel'); panel.width = '330px'; panel.height = '220px';
   panel.background = '#111d2deb'; panel.color = '#4b6075'; panel.cornerRadius = 8;
