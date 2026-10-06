@@ -64,15 +64,54 @@ test('snapshot validation rejects item duplication, invalid owners and targets; 
     s => { s.entities[0].combat.targetId = 'missing'; },
     s => { s.inventories = [{ entityId: 'arena-sentinel', items: [] }]; },
     s => { s.inventories = [{ entityId: 'fighter', items: [s.loot[0]] }]; },
+    s => { s.equipment = [{ entityId: 'fighter', slots: { weapon: 'missing', offhand: null } }]; },
   ]) { const invalid = JSON.parse(JSON.stringify(original)); mutate(invalid); assert.throws(() => Simulation.restore(invalid)); }
-  const legacy = { ...original, schemaVersion: 1, protocolVersion: 1 }; delete legacy.loot; delete legacy.inventories;
+  const legacy = { ...original, schemaVersion: 1, protocolVersion: 1 }; delete legacy.loot; delete legacy.inventories; delete legacy.equipment;
   assert.deepEqual(Simulation.restore(legacy).getLoot(), []);
+  const legacy2 = JSON.parse(JSON.stringify(original)); legacy2.schemaVersion = 2; legacy2.protocolVersion = 2; delete legacy2.equipment;
+  for (const item of [...legacy2.loot, ...legacy2.inventories.flatMap(entry => entry.items)]) delete item.affixes;
+  assert.deepEqual(Simulation.restore(legacy2).getEquipment('fighter'), { weapon: null, offhand: null });
 });
 
 test('inventory capacity rejects pickup without destroying the ground drop', () => {
   const world = encounter(); kill(world); const snapshot = world.snapshot();
-  snapshot.inventories = [{ entityId: 'fighter', items: Array.from({ length: 128 }, (_, i) => ({ id: `old-${i}`, definitionId: 'iron-shard', quantity: 1 })) }];
+  snapshot.inventories = [{ entityId: 'fighter', items: Array.from({ length: 128 }, (_, i) => ({ id: `old-${i}`, definitionId: 'iron-shard', quantity: 1, affixes: [] })) }];
   const full = Simulation.restore(snapshot); const drop = full.getLoot()[0];
   assert.equal(action(full, 'PickUp', { lootId: drop.id })[0].reason, 'inventory-full');
   assert.equal(full.getLoot().length, 1); assert.equal(full.getInventory('fighter').length, 128);
+});
+
+
+test('Step 5 equipment instances change derived stats and combat without moving rules into presentation', () => {
+  const world = encounter(2.1, 1327); kill(world);
+  const drop = world.getLoot()[0];
+  assert.equal(drop.definitionId, 'worn-blade');
+  assert.deepEqual(drop.affixes, [{ id: 'keen', roll: 1 }]);
+  action(world, 'PickUp', { lootId: drop.id });
+  assert.deepEqual(world.getDerivedStats('fighter'), { walkSpeed: 5, sprintSpeed: 9, attackDamage: 20 });
+  assert.equal(action(world, 'EquipItem', { itemId: drop.id })[0].type, 'ItemEquipped');
+  assert.deepEqual(world.getEquipment('fighter'), { weapon: drop.id, offhand: null });
+  assert.deepEqual(world.getDerivedStats('fighter'), { walkSpeed: 5, sprintSpeed: 9, attackDamage: 30 });
+
+  const restored = Simulation.restore(deserializeSnapshot(serializeSnapshot(world.snapshot())));
+  assert.deepEqual(restored.getEquipment('fighter'), world.getEquipment('fighter'));
+  assert.deepEqual(restored.getDerivedStats('fighter'), world.getDerivedStats('fighter'));
+
+  const nextEnemy = createArenaEnemy(); nextEnemy.id = 'second-sentinel'; nextEnemy.transform.position.z = 2.2;
+  restored.spawn(nextEnemy); restored.drainEvents();
+  action(restored, 'Target', { targetId: 'second-sentinel' });
+  ready(restored);
+  const hit = action(restored, 'Attack').find(event => event.type === 'DamageApplied');
+  assert.equal(hit.amount, 30);
+  assert.equal(restored.getEntity('second-sentinel').health.current, 30);
+});
+
+test('Step 5 rejects missing and non-equippable inventory items', () => {
+  const world = encounter();
+  assert.equal(action(world, 'EquipItem', { itemId: 'missing' })[0].reason, 'item-unavailable');
+  kill(world); const drop = world.getLoot()[0];
+  action(world, 'PickUp', { lootId: drop.id });
+  if (drop.definitionId === 'iron-shard') {
+    assert.equal(action(world, 'EquipItem', { itemId: drop.id })[0].reason, 'item-not-equippable');
+  }
 });
