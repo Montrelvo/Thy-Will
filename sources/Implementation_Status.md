@@ -1,6 +1,6 @@
 # Thy Will implementation status
 
-Updated: 2026-10-05
+Updated: 2026-10-06
 
 ## Step 1 — Complete
 
@@ -167,10 +167,37 @@ screenshots were inspected. This first delivery establishes the character and
 editable pipeline; environment/enemy replacements and HUD polish follow within
 the art direction. Step 5 remains separate.
 
-## Next — Step 5
+## Step 5 — Inventory / equipment
 
-Inventory/equipment instances, modifiers and equip-derived character stats.
-Proceed after the Step 4 review and merge.
+Merged as PR #10 on 2026-10-06. Item instances now carry stable IDs and affixes;
+player inventories and weapon/offhand equipment serialize with snapshots; equipment
+changes simulation-derived movement and attack stats. The Babylon client reads and
+displays those results rather than calculating RPG rules.
+
+## Step 6 — Crafting
+
+Implementation branch: `codex/step-6-crafting`.
+
+Crafting recipes are content data interpreted by the headless simulation. The first
+recipe set covers component combination, adding a modifier, upgrading a modifier
+value, replacing a modifier, deterministic seeded rerolling, and attaching an item
+effect. Crafting consumes material quantities transactionally, validates targets
+and operation limits, emits `ItemCrafted`, and preserves crafted state through
+snapshots. A host-supplied validation hook is available for later server authority.
+
+The Babylon client only requests simulation-reported craft options and displays
+results. Recipe costs, mutation logic, RNG and validation remain outside the UI.
+Step 6 adds focused headless crafting coverage for material consumption, item-ID
+uniqueness, modifier/effect operations, deterministic rerolls, derived stats,
+transactional rejection, server-validation hooks and schema migration. Tests are
+maintained as part of implementation; after publication, CI results are reported
+without reactive test changes made solely to obtain a passing result.
+
+## Next — Step 7
+
+Firebase development project: Authentication, Firestore and Hosting. This step
+requires Firebase/Google project access and any paid/billing action remains subject
+to explicit authorization.
 
 ## Permissions
 

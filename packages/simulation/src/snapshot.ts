@@ -1,4 +1,8 @@
-import { PROTOCOL_VERSION, SNAPSHOT_VERSION, type Entity, type WorldSnapshot, type LootDrop, type CollectedItem, type ItemAffix } from '@thy-will/protocol';
+import {
+  PROTOCOL_VERSION, SNAPSHOT_VERSION,
+  type Entity, type WorldSnapshot, type LootDrop, type CollectedItem,
+  type ItemAffix, type ItemEffectId,
+} from '@thy-will/protocol';
 import { ARENA_LIMIT } from './movement.js';
 
 function record(value: unknown): Record<string, unknown> {
@@ -17,6 +21,9 @@ function id(value: unknown, max = 128): string {
 }
 function position(value: unknown) {
   const p = record(value); return { x: number(p['x'], -ARENA_LIMIT, ARENA_LIMIT), z: number(p['z'], -ARENA_LIMIT, ARENA_LIMIT) };
+}
+function collection(value: unknown, limit: number): unknown[] {
+  if (!Array.isArray(value) || value.length > limit) throw new RangeError('Invalid collection'); return value;
 }
 
 export function validateEntity(value: unknown): Entity {
@@ -45,22 +52,25 @@ function affix(value: unknown): ItemAffix {
   if (data['id'] !== 'keen' && data['id'] !== 'fleet') throw new TypeError('Unknown item affix');
   return { id: data['id'], roll: number(data['roll'], 0, 10) };
 }
-function item(value: unknown, legacy = false): CollectedItem {
-  const data = record(value);
-  if (data['definitionId'] !== 'iron-shard' && data['definitionId'] !== 'worn-blade') throw new TypeError('Unknown loot definition');
-  const affixes = legacy ? [] : collection(data['affixes'], 8).map(affix);
-  return { id: id(data['id'], 256), definitionId: data['definitionId'], quantity: integer(data['quantity'], 1, 999), affixes };
+function effect(value: unknown): ItemEffectId {
+  if (value !== 'honed-edge') throw new TypeError('Unknown item effect');
+  return value;
 }
-function collection(value: unknown, limit: number): unknown[] {
-  if (!Array.isArray(value) || value.length > limit) throw new RangeError('Invalid collection'); return value;
+function item(value: unknown, legacyAffixes = false, legacyEffects = false): CollectedItem {
+  const data = record(value);
+  if (data['definitionId'] !== 'iron-shard' && data['definitionId'] !== 'refined-iron' && data['definitionId'] !== 'worn-blade') throw new TypeError('Unknown loot definition');
+  const affixes = legacyAffixes ? [] : collection(data['affixes'], 8).map(affix);
+  const effects = legacyEffects ? [] : collection(data['effects'], 4).map(effect);
+  return { id: id(data['id'], 256), definitionId: data['definitionId'], quantity: integer(data['quantity'], 1, 999), affixes, effects };
 }
 
-/** Schema 1 and 2 checkpoints migrate to schema 3 with explicit affixes/equipment. */
+/** Schema 1–3 checkpoints migrate to schema 4 with explicit effects and crafting outputs. */
 export function parseSnapshot(value: unknown): WorldSnapshot {
   const data = record(value);
   const legacy1 = data['schemaVersion'] === 1 && data['protocolVersion'] === 1;
   const legacy2 = data['schemaVersion'] === 2 && data['protocolVersion'] === 2;
-  if (!legacy1 && !legacy2 && (data['schemaVersion'] !== SNAPSHOT_VERSION || data['protocolVersion'] !== PROTOCOL_VERSION)) throw new RangeError('Unsupported snapshot version');
+  const legacy3 = data['schemaVersion'] === 3 && data['protocolVersion'] === 3;
+  if (!legacy1 && !legacy2 && !legacy3 && (data['schemaVersion'] !== SNAPSHOT_VERSION || data['protocolVersion'] !== PROTOCOL_VERSION)) throw new RangeError('Unsupported snapshot version');
 
   const tick = integer(data['tick'], 0, Number.MAX_SAFE_INTEGER);
   const random = record(data['random']); const state = integer(random['state'], 0, 0xffffffff);
@@ -71,19 +81,20 @@ export function parseSnapshot(value: unknown): WorldSnapshot {
   if (byId.size !== entities.length) throw new RangeError('Duplicate entity id');
   for (const entity of entities) if (entity.combat?.targetId !== null && entity.combat?.targetId !== undefined && byId.get(entity.combat.targetId)?.kind !== 'enemy') throw new RangeError('Invalid target reference');
 
-  const legacyItems = legacy1 || legacy2;
-  const loot: LootDrop[] = legacy1 ? [] : collection(data['loot'], 10000).map(value => ({ ...item(value, legacyItems), position: position(record(value)['position']) }));
+  const legacyAffixes = legacy1 || legacy2;
+  const legacyEffects = legacy1 || legacy2 || legacy3;
+  const loot: LootDrop[] = legacy1 ? [] : collection(data['loot'], 10000).map(value => ({ ...item(value, legacyAffixes, legacyEffects), position: position(record(value)['position']) }));
   const inventories = legacy1 ? [] : collection(data['inventories'], 10000).map(value => {
     const entry = record(value); const entityId = id(entry['entityId']);
     if (byId.get(entityId)?.kind !== 'player') throw new RangeError('Invalid inventory owner');
-    return { entityId, items: collection(entry['items'], 128).map(value => item(value, legacyItems)) };
+    return { entityId, items: collection(entry['items'], 128).map(value => item(value, legacyAffixes, legacyEffects)) };
   });
   if (new Set(inventories.map(entry => entry.entityId)).size !== inventories.length) throw new RangeError('Duplicate inventory owner');
 
   const items = [...loot, ...inventories.flatMap(entry => entry.items)];
   if (new Set(items.map(entry => entry.id)).size !== items.length) throw new RangeError('Duplicate item id');
 
-  const equipment = legacyItems
+  const equipment = legacy1 || legacy2
     ? entities.filter(entity => entity.kind === 'player').map(entity => ({ entityId: entity.id, slots: { weapon: null, offhand: null } }))
     : collection(data['equipment'], 10000).map(value => {
       const entry = record(value); const entityId = id(entry['entityId']); const slots = record(entry['slots']);

@@ -17,4 +17,5 @@ export type { EntityId, Entity, Transform, Stats, Health, GameCommand, GameEvent
 export { CHARACTER_VERSION, parseCharacter, createCharacter, characterEntity } from './character.js';
 export type { CharacterRecord, CharacterPalette } from './character.js';
 export { createArenaEnemy } from './world.js';
-export type { LootDrop, CollectedItem, LootDefinitionId, CombatState, RejectionReason, ItemAffix, ItemAffixId, EquipmentSlot, EquipmentSlots, EquipmentState, DerivedStats } from '@thy-will/protocol';
+export type { LootDrop, CollectedItem, LootDefinitionId, CombatState, RejectionReason, ItemAffix, ItemAffixId, ItemEffectId, EquipmentSlot, EquipmentSlots, EquipmentState, DerivedStats, CraftRecipeId, CraftOption } from '@thy-will/protocol';
+export type { CraftValidationContext, CraftValidationHook } from './world.js';

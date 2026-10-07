@@ -75,7 +75,7 @@ test('snapshot validation rejects item duplication, invalid owners and targets; 
 
 test('inventory capacity rejects pickup without destroying the ground drop', () => {
   const world = encounter(); kill(world); const snapshot = world.snapshot();
-  snapshot.inventories = [{ entityId: 'fighter', items: Array.from({ length: 128 }, (_, i) => ({ id: `old-${i}`, definitionId: 'iron-shard', quantity: 1, affixes: [] })) }];
+  snapshot.inventories = [{ entityId: 'fighter', items: Array.from({ length: 128 }, (_, i) => ({ id: `old-${i}`, definitionId: 'iron-shard', quantity: 1, affixes: [], effects: [] })) }];
   const full = Simulation.restore(snapshot); const drop = full.getLoot()[0];
   assert.equal(action(full, 'PickUp', { lootId: drop.id })[0].reason, 'inventory-full');
   assert.equal(full.getLoot().length, 1); assert.equal(full.getInventory('fighter').length, 128);
