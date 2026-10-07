@@ -1,6 +1,6 @@
 # Thy Will implementation status
 
-Updated: 2026-10-06
+Updated: 2026-10-07
 
 ## Step 1 — Complete
 
@@ -176,7 +176,7 @@ displays those results rather than calculating RPG rules.
 
 ## Step 6 — Crafting
 
-Implementation branch: `codex/step-6-crafting`.
+Merged as PR #11 on 2026-10-07.
 
 Crafting recipes are content data interpreted by the headless simulation. The first
 recipe set covers component combination, adding a modifier, upgrading a modifier
@@ -193,11 +193,29 @@ transactional rejection, server-validation hooks and schema migration. Tests are
 maintained as part of implementation; after publication, CI results are reported
 without reactive test changes made solely to obtain a passing result.
 
-## Next — Step 7
+## Step 7 — Firebase development foundation
 
-Firebase development project: Authentication, Firestore and Hosting. This step
-requires Firebase/Google project access and any paid/billing action remains subject
-to explicit authorization.
+Implementation branch: `codex/step-7-firebase-foundation`.
+
+Repository-side Firebase configuration now covers anonymous browser identity,
+local browser persistence, explicit Auth-emulator opt-in, Firestore owner-scoped
+development rules, Hosting output, emulator ports, environment configuration and
+identity diagnostics. An unowned local character may bind to the authenticated
+anonymous UID; an existing different owner UID is never silently overwritten.
+
+Normal CI remains cloud-independent: absent Firebase configuration is an explicit
+`unconfigured` state and does not load remote SDK modules. Configuration parsing
+and the unconfigured browser path have focused tests.
+
+Live Step 7 acceptance is not yet complete because the development Firebase/Google
+Cloud project must still be created/connected, Anonymous Authentication enabled,
+Firestore created, Hosting enabled, and a real browser session used to verify that
+the same anonymous UID survives reload. No paid/billing action is required by this
+repository work and none has been authorized.
+
+## Next — Step 8
+
+Save/load begins only after the live Step 7 identity/project acceptance check.
 
 ## Permissions
 
