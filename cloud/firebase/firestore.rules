@@ -1,0 +1,79 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isUser(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function ownsExisting() {
+      return signedIn() && resource.data.ownerUid == request.auth.uid;
+    }
+
+    function ownsIncoming() {
+      return signedIn() && request.resource.data.ownerUid == request.auth.uid;
+    }
+
+    function keepsOwner() {
+      return ownsExisting() && ownsIncoming() &&
+        request.resource.data.ownerUid == resource.data.ownerUid;
+    }
+
+    match /users/{uid} {
+      allow read, create, update, delete: if isUser(uid);
+    }
+
+    match /settings/{uid} {
+      allow read, create, update, delete: if isUser(uid);
+    }
+
+    match /accountEntitlements/{uid} {
+      allow read: if isUser(uid);
+      allow write: if false;
+    }
+
+    match /characters/{id} {
+      allow create: if ownsIncoming();
+      allow read, delete: if ownsExisting();
+      allow update: if keepsOwner();
+    }
+
+    match /inventories/{id} {
+      allow create: if ownsIncoming();
+      allow read, delete: if ownsExisting();
+      allow update: if keepsOwner();
+    }
+
+    match /items/{id} {
+      allow create: if ownsIncoming();
+      allow read, delete: if ownsExisting();
+      allow update: if keepsOwner();
+    }
+
+    match /craftingProfiles/{id} {
+      allow create: if ownsIncoming();
+      allow read, delete: if ownsExisting();
+      allow update: if keepsOwner();
+    }
+
+    match /progression/{id} {
+      allow create: if ownsIncoming();
+      allow read, delete: if ownsExisting();
+      allow update: if keepsOwner();
+    }
+
+    match /unlocks/{id} {
+      allow create: if ownsIncoming();
+      allow read, delete: if ownsExisting();
+      allow update: if keepsOwner();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
