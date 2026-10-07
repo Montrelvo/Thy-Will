@@ -38,6 +38,7 @@ function consumeCosts(inventory: CollectedItem[], costs: readonly { definitionId
     let remaining = cost.quantity;
     for (let i = inventory.length - 1; i >= 0 && remaining > 0; i--) {
       const item = inventory[i];
+      if (!item) continue;
       if (item.definitionId !== cost.definitionId) continue;
       const used = Math.min(remaining, item.quantity);
       item.quantity -= used; remaining -= used;
@@ -253,7 +254,9 @@ export class Simulation {
           const existing = workingTarget.affixes[operation.affixIndex];
           if (!existing) throw new Error('crafting-operation-invalid');
           const poolIndex = Math.min(operation.pool.length - 1, Math.floor(this.random.next() * operation.pool.length));
-          existing.id = operation.pool[poolIndex];
+          const nextAffixId = operation.pool[poolIndex];
+          if (!nextAffixId) throw new Error('crafting-operation-invalid');
+          existing.id = nextAffixId;
           existing.roll = operation.minimumRoll + this.random.next() * (operation.maximumRoll - operation.minimumRoll);
         } else if (operation.type === 'attach-effect') {
           if (workingTarget.effects.length >= 4 || workingTarget.effects.includes(operation.effectId)) throw new Error('crafting-operation-invalid');
