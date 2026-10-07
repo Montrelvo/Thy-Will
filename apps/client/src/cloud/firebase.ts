@@ -15,8 +15,8 @@ export type FirebaseIdentityState =
   | { status: 'error'; uid: null; message: string };
 
 interface FirebaseUser { uid: string }
-interface FirebaseAuth {}
-interface FirebaseApp {}
+type FirebaseAuth = object;
+type FirebaseApp = object;
 
 interface FirebaseAppModule {
   initializeApp(config: FirebaseBrowserConfig): FirebaseApp;
