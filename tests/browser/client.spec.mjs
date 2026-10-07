@@ -23,6 +23,8 @@ test('production scene renders, moves, sprints, resets, resizes, and releases ke
   await expect(canvas).toHaveAttribute('data-ready', 'true');
   await expect(canvas).toHaveAttribute('data-asset', 'ready');
   await expect(page.locator('#status')).toBeHidden();
+  await expect(canvas).toHaveAttribute('data-auth-status', 'unconfigured');
+  await expect(canvas).toHaveAttribute('data-auth-uid', '');
   const walking = await move(page, 'w');
   expect(walking.z).toBeGreaterThan(0.5);
   await page.keyboard.press('r');

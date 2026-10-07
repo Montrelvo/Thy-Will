@@ -14,6 +14,7 @@ import { attachTouchCamera } from './mobile-preview.js';
 import { initialMode, type PlayMode } from './modes.js';
 import type { Demonstration } from './presentation/character.js';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector.js';
+import { establishFirebaseIdentity } from './cloud/firebase.js';
 import './style.css';
 
 async function start(): Promise<() => void> {
@@ -24,6 +25,19 @@ async function start(): Promise<() => void> {
   const engine = new Engine(canvas, true, { stencil: true, preserveDrawingBuffer: false });
   const repository = new LocalCharacterRepository();
   let character = repository.load();
+  const firebaseIdentity = await establishFirebaseIdentity();
+  let authStatus: 'unconfigured' | 'signed-in' | 'error' | 'identity-mismatch' = firebaseIdentity.status;
+  if (firebaseIdentity.status === 'signed-in') {
+    if (character.ownerUid === null) {
+      character.ownerUid = firebaseIdentity.uid;
+      repository.save(character);
+      character = repository.load();
+    } else if (character.ownerUid !== firebaseIdentity.uid) {
+      authStatus = 'identity-mismatch';
+    }
+  }
+  canvas.dataset['authStatus'] = authStatus;
+  canvas.dataset['authUid'] = firebaseIdentity.uid ?? '';
   const device = window.matchMedia('(pointer: coarse)');
   let touch = device.matches;
   let mode: PlayMode = initialMode(touch);
@@ -137,7 +151,9 @@ async function start(): Promise<() => void> {
     const displayPosition = mode === 'inspection' ? { x: 0, z: 0 } : position;
     view.character.display(displayPosition, mode === 'inspection' ? Math.PI : rotation, animationTime, mode === 'arena' && Math.hypot(frame.x, frame.z) > 0, mode === 'inspection' ? demonstration : 'idle');
     view.camera.setTarget(new Vector3(displayPosition.x, mode === 'inspection' && canvas.clientHeight < 520 ? 1.7 : 1, displayPosition.z), false, false, true);
-    const storageLabel = repository.status === 'saved' ? 'Saved on this device' : repository.status === 'recovery' ? 'Saved character unavailable · session only' : 'This session only';
+    const localStorageLabel = repository.status === 'saved' ? 'Saved on this device' : repository.status === 'recovery' ? 'Saved character unavailable · session only' : 'This session only';
+    const cloudIdentityLabel = authStatus === 'signed-in' ? 'Firebase guest' : authStatus === 'identity-mismatch' ? 'Firebase identity mismatch' : authStatus === 'error' ? 'Firebase unavailable' : 'Cloud unconfigured';
+    const storageLabel = `${localStorageLabel} · ${cloudIdentityLabel}`;
     const enemy = simulation.getEntity(ARENA_ENEMY.id)!;
     const loot = simulation.getLoot(); const inventory = simulation.getInventory(character.characterId);
     const equipment = simulation.getEquipment(character.characterId); const derived = simulation.getDerivedStats(character.characterId)!;
